@@ -92,6 +92,19 @@ class _LockersScreenState extends State<LockersScreen> {
     if (confirmed == true) {
       try {
         await _firestoreService.forceReleaseLocker(locker.id, 'staff-1', 'Admin action');
+        
+        // Log activity
+        await _firestoreService.logActivity(
+          action: 'force_release',
+          lockerId: locker.id,
+          lockerSector: locker.sector,
+          lockerNumber: locker.number,
+          staffId: 'staff-1',
+          staffName: 'Admin',
+          description: 'Ormar ${locker.sector}-${locker.number} oslobođen prinudno',
+          success: true,
+        );
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ormar je uspješno oslobođen')),
@@ -99,6 +112,19 @@ class _LockersScreenState extends State<LockersScreen> {
           _loadLockers();
         }
       } catch (e) {
+        // Log failed activity
+        await _firestoreService.logActivity(
+          action: 'force_release',
+          lockerId: locker.id,
+          lockerSector: locker.sector,
+          lockerNumber: locker.number,
+          staffId: 'staff-1',
+          staffName: 'Admin',
+          description: 'Pokušaj oslobađanja ormara ${locker.sector}-${locker.number}',
+          success: false,
+          errorMessage: e.toString(),
+        );
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Greška: $e')),

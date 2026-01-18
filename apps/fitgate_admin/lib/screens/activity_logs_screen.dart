@@ -151,17 +151,17 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   }
 
   Stream<QuerySnapshot> _buildQuery() {
-    var query = _firestore.collection('activityLogs').orderBy('timestamp', descending: true);
+    Query<Object?> query = _firestore.collection('activityLogs').orderBy('timestamp', descending: true);
 
     if (_selectedAction != 'All') {
-      query = query.where('action', isEqualTo: _selectedAction) as Query<Map<String, dynamic>>;
+      query = query.where('action', isEqualTo: _selectedAction);
     }
 
     if (_selectedStatus != 'All') {
-      query = query.where('status', isEqualTo: _selectedStatus) as Query<Map<String, dynamic>>;
+      query = query.where('status', isEqualTo: _selectedStatus);
     }
 
-    return query.limit(100).snapshots();
+    return (query as CollectionReference<Map<String, dynamic>>).limit(100).snapshots();
   }
 
   void _showActionFilterDialog() {
