@@ -20,12 +20,7 @@ class _LockersScreenState extends State<LockersScreen> {
   String _selectedSector = 'All';
   String _selectedStatus = 'All';
   final List<String> _sectors = ['All', 'A', 'B', 'C', 'D'];
-  final List<String> _statuses = ['All', 'Dostupni', 'Zauzeti', 'U kvaru'];
-  final Map<String, String> _statusMap = {
-    'Dostupni': 'free',
-    'Zauzeti': 'occupied',
-    'U kvaru': 'out_of_service',
-  };
+  final List<String> _statuses = ['All', 'free', 'occupied', 'out_of_service'];
   final FirestoreService _firestoreService = FirestoreService();
 
   @override
@@ -56,11 +51,32 @@ class _LockersScreenState extends State<LockersScreen> {
   }
 
   List<Locker> get _filteredLockers {
-    return _lockers.where((l) {
-      final sectorMatch = _selectedSector == 'All' || l.sector == _selectedSector;
-      final statusMatch = _selectedStatus == 'All' || l.status == _statusMap[_selectedStatus];
-      return sectorMatch && statusMatch;
-    }).toList();
+    var filtered = _lockers;
+    
+    // Filter by sector
+    if (_selectedSector != 'All') {
+      filtered = filtered.where((l) => l.sector == _selectedSector).toList();
+    }
+    
+    // Filter by status
+    if (_selectedStatus != 'All') {
+      filtered = filtered.where((l) => l.status == _selectedStatus).toList();
+    }
+    
+    return filtered;
+  }
+  
+  String _getStatusLabel(String status) {
+    switch (status) {
+      case 'free':
+        return 'Dostupno';
+      case 'occupied':
+        return 'Zauzeto';
+      case 'out_of_service':
+        return 'Neispravno';
+      default:
+        return 'Sve';
+    }
   }
 
   Future<void> _forceReleaseLocker(Locker locker) async {
@@ -171,23 +187,36 @@ class _LockersScreenState extends State<LockersScreen> {
       return;
     }
 
+    print('🔑 Pokušavam dodjelu ormara sa: $cardId');
+
     try {
+      print('📞 Pozivam assignLockerToMember...');
       final result = await _firestoreService.assignLockerToMember(cardId, 'staff-1');
+      
+      print('✅ Dodjela uspješna!');
+      print('   - Rezultat: $result');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Ormar ${result['lockerNumber']} asigniran članu ${result['memberName']}',
+              'Ormar ${result['lockerSector']}-${result['lockerNumber']} asigniran članu ${result['memberName']}',
             ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
           ),
         );
         _loadLockers();
       }
     } catch (e) {
+      print('❌ Greška pri dodjeli: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška: $e')),
+          SnackBar(
+            content: Text('Greška pri dodjeli: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
@@ -246,52 +275,45 @@ class _LockersScreenState extends State<LockersScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Status filter
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        const Text('Status:'),
-                        const SizedBox(width: 12),
-                        ..._statuses.map(
-                          (status) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(status),
-                              selected: _selectedStatus == status,
-                              onSelected: (selected) {
-                                setState(() => _selectedStatus = status);
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
                   // Sector filter
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        const Text('Sektor:'),
-                        const SizedBox(width: 12),
-                        ..._sectors.map(
-                          (sector) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(sector),
-                              selected: _selectedSector == sector,
-                              onSelected: (selected) {
-                                setState(
-                                    () => _selectedSector = sector);
-                              },
-                            ),
+                  Row(
+                    children: [
+                      const Text('Sektor:', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 12),
+                      ..._sectors.map(
+                        (sector) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(sector),
+                            selected: _selectedSector == sector,
+                            onSelected: (selected) {
+                              setState(() => _selectedSector = sector);
+                            },
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Status filter
+                  Row(
+                    children: [
+                      const Text('Status:', style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 12),
+                      ..._statuses.map(
+                        (status) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(_getStatusLabel(status)),
+                            selected: _selectedStatus == status,
+                            onSelected: (selected) {
+                              setState(() => _selectedStatus = status);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
 
@@ -301,7 +323,7 @@ class _LockersScreenState extends State<LockersScreen> {
                         ? EmptyView(
                           title: 'Nema ormara',
                           subtitle:
-                            'Nema ormara koji odgovaraju odabranom sektoru',
+                            'Nema ormara koji odgovaraju filtrima',
                             icon: Icons.storage,
                           )
                         : GridView.builder(
@@ -310,7 +332,7 @@ class _LockersScreenState extends State<LockersScreen> {
                               crossAxisCount: 8,
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              childAspectRatio: 1.1,
+                              childAspectRatio: 0.85,
                             ),
                             itemCount: _filteredLockers.length,
                             itemBuilder: (context, index) {
