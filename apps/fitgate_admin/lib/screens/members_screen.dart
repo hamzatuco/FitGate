@@ -13,7 +13,7 @@ class MembersScreen extends StatefulWidget {
   State<MembersScreen> createState() => _MembersScreenState();
 }
 
-class _MembersScreenState extends State<MembersScreen> {
+class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserver {
   bool _isLoading = true;
   List<Member> _members = [];
   String _searchQuery = '';
@@ -22,7 +22,22 @@ class _MembersScreenState extends State<MembersScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadMembers();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Osvježi članove kada se vrati u foreground
+    if (state == AppLifecycleState.resumed) {
+      _loadMembers();
+    }
   }
 
   Future<void> _loadMembers() async {
@@ -116,11 +131,18 @@ class _MembersScreenState extends State<MembersScreen> {
                         ],
                       ),
                       ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushNamed('/member/edit');
+                        onPressed: () async {
+                          await Navigator.of(context).pushNamed('/member/edit');
+                          // Osvježi liste nakon povratka
+                          _loadMembers();
                         },
                         icon: const Icon(Icons.add),
                         label: const Text('Registruj Člana'),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _loadMembers,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Osvježi'),
                       ),
                     ],
                   ),
@@ -169,7 +191,7 @@ class _MembersScreenState extends State<MembersScreen> {
                               child: DataTable(
                                 columns: const [
                                   DataColumn(label: Text('Ime')),
-                                  DataColumn(label: Text('ID Kartice')),
+                                  DataColumn(label: Text('Email')),
                                   DataColumn(label: Text('Status')),
                                   DataColumn(label: Text('Ormar')),
                                   DataColumn(label: Text('Važeći Do')),
@@ -195,10 +217,12 @@ class _MembersScreenState extends State<MembersScreen> {
                                           Row(
                                             children: [
                                               TextButton(
-                                                onPressed: () {
-                                                  Navigator.of(context)
+                                                onPressed: () async {
+                                                  await Navigator.of(context)
                                                       .pushNamed('/member/edit',
                                                           arguments: member);
+                                                  // Osvježi liste nakon povratka
+                                                  _loadMembers();
                                                 },
                                                 child: const Text('Uredi'),
                                               ),

@@ -48,82 +48,66 @@ class LockerTile extends StatelessWidget {
             width: 2,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: _getStatusColor().withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Icon(
-                  status == 'free'
-                      ? Icons.lock_open
-                      : status == 'occupied'
-                          ? Icons.lock
-                          : Icons.error_outline,
-                  color: _getStatusColor(),
-                  size: 24,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: _getStatusColor().withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'L$lockerNumber',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              sector,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            if (assignedMember != null) ...[
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Text(
-                  assignedMember!,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[700],
+                child: Center(
+                  child: Icon(
+                    status == 'free'
+                        ? Icons.lock_open
+                        : status == 'occupied'
+                            ? Icons.lock
+                            : Icons.error_outline,
+                    color: _getStatusColor(),
+                    size: 20,
                   ),
                 ),
               ),
-            ],
-            if (status == 'occupied') ...[
               const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                height: 32,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+              Text(
+                lockerNumber,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                sector,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                ),
+              ),
+              if (status == 'occupied') ...[
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 24,
                   child: ElevatedButton(
                     onPressed: onForceRelease,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red[600],
-                      padding: EdgeInsets.zero,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
                     ),
                     child: const Text(
                       'Release',
-                      style: TextStyle(fontSize: 10, color: Colors.white),
+                      style: TextStyle(fontSize: 9, color: Colors.white),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

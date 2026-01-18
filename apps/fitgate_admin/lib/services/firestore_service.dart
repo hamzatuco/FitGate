@@ -22,12 +22,53 @@ class FirestoreService {
           name: data['name'] ?? '',
           cardId: data['cardId'] ?? '',
           status: data['status'] ?? 'active',
-          membershipValidUntil: (data['membershipValidUntil'] as Timestamp?)?.toDate() ?? DateTime.now(), registeredAt: (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          membershipValidUntil: (data['membershipValidUntil'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          registeredAt: (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         );
       }).toList();
     } catch (e) {
-      throw Exception('Greška pri učitavanju članova: $e');
+      // Fallback: get members without ordering if registeredAt index doesn't exist
+      try {
+        QuerySnapshot snapshot = await _firestore
+            .collection('members')
+            .get();
+
+        List<Member> members = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          return Member(
+            id: doc.id,
+            name: data['name'] ?? '',
+            cardId: data['cardId'] ?? '',
+            status: data['status'] ?? 'active',
+            membershipValidUntil: (data['membershipValidUntil'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            registeredAt: (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          );
+        }).toList();
+
+        // Sort by registeredAt in Dart
+        members.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+        return members;
+      } catch (fallbackError) {
+        throw Exception('Greška pri učitavanju članova: $e');
+      }
     }
+  }
+
+  /// Get members as stream for realtime updates
+  Stream<List<Member>> getMembersStream() {
+    return _firestore.collection('members').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        var data = doc.data();
+        return Member(
+          id: doc.id,
+          name: data['name'] ?? '',
+          cardId: data['cardId'] ?? '',
+          status: data['status'] ?? 'active',
+          membershipValidUntil: (data['membershipValidUntil'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          registeredAt: (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        );
+      }).toList()..sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+    });
   }
 
   /// Get single member by ID
@@ -199,6 +240,7 @@ class FirestoreService {
       String lockerId = selectedLocker.id;
       Map<String, dynamic> lockerData = selectedLocker.data() as Map<String, dynamic>;
       String lockerNumber = lockerData['number'] ?? 'N/A';
+      String lockerSector = lockerData['sector'] ?? 'N/A';
 
       // Update locker
       await _firestore.collection('lockers').doc(lockerId).update({
@@ -209,11 +251,23 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // Update member
+      print('✏️ Updated locker document with status=occupied');
+
+      // Update member with locker details
       await _firestore.collection('members').doc(memberId).update({
         'assignedLockerId': lockerId,
+        'assignedLockerSector': lockerSector,
+        'assignedLockerNumber': lockerNumber,
+        'lastAccessTime': FieldValue.serverTimestamp(),
+        'cardAssigned': true,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      print('✏️ Updated member document:');
+      print('   - assignedLockerSector: $lockerSector');
+      print('   - assignedLockerNumber: $lockerNumber');
+      print('   - cardAssigned: true');
+      print('   - lastAccessTime: serverTimestamp');
 
       // Log activity
       await _logActivity(
