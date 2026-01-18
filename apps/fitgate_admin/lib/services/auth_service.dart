@@ -24,7 +24,6 @@ class AuthService {
           .collection('users')
           .doc(userCredential.user!.uid)
           .get();
-          print(userDoc.data());
       if (!userDoc.exists) {
         await logout();
         throw Exception('Korisnik ne postoji u bazi');

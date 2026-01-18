@@ -19,8 +19,6 @@ class InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('🎴 InfoCard rendering: $title = $value');
-    
     final actualIconColor = iconColor ?? Colors.blue[700]!;
     
     return Card(
