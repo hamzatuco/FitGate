@@ -75,6 +75,17 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
       
       await _firestoreService.updateMember(member.id, updatedMember);
       
+      // Log activity
+      await _firestoreService.logActivity(
+        action: 'suspend_member',
+        memberId: member.id,
+        memberName: member.name,
+        staffId: 'admin-1', // TODO: Get from actual admin user
+        staffName: 'Admin',
+        description: 'Član ${member.name} je suspenziviran',
+        success: true,
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Član je suspenziviran')),
@@ -82,6 +93,18 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
         _loadMembers();
       }
     } catch (e) {
+      // Log failed activity
+      await _firestoreService.logActivity(
+        action: 'suspend_member',
+        memberId: member.id,
+        memberName: member.name,
+        staffId: 'admin-1',
+        staffName: 'Admin',
+        description: 'Pokušaj suspenzije člana ${member.name}',
+        success: false,
+        errorMessage: e.toString(),
+      );
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Greška pri suspenziji člana: $e')),

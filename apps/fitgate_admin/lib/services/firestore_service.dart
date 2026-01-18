@@ -393,6 +393,35 @@ class FirestoreService {
     }
   }
 
+  /// Log an activity (public method for external use)
+  Future<void> logActivity({
+    required String action,
+    String? memberId,
+    String? memberName,
+    String? lockerId,
+    String? lockerNumber,
+    String? lockerSector,
+    String? staffId,
+    String? staffName,
+    required String description,
+    required bool success,
+    String? errorMessage,
+  }) async {
+    await _logActivity(
+      action: action,
+      memberId: memberId,
+      memberName: memberName,
+      lockerId: lockerId,
+      lockerNumber: lockerNumber,
+      lockerSector: lockerSector,
+      staffId: staffId,
+      staffName: staffName,
+      description: description,
+      success: success,
+      errorMessage: errorMessage,
+    );
+  }
+
   /// Log an activity (internal helper)
   Future<void> _logActivity({
     required String action,

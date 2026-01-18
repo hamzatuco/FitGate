@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 import 'members_screen.dart';
 import 'lockers_screen.dart';
+import 'activity_logs_screen.dart';
 
 /// Shell layout with sidebar navigation
 class ShellScreen extends StatelessWidget {
@@ -68,6 +69,8 @@ class ShellScreen extends StatelessWidget {
         return const MembersScreen();
       case '/lockers':
         return const LockersScreen();
+      case '/activity-logs':
+        return const ActivityLogsScreen();
       case '/dashboard':
       default:
         return const DashboardScreen();
@@ -123,6 +126,13 @@ class ShellScreen extends StatelessWidget {
                     icon: Icons.lock_outline,
                     label: 'Ormari',
                     route: '/lockers',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildNavItem(
+                    context: context,
+                    icon: Icons.history,
+                    label: 'Nedavna Aktivnost',
+                    route: '/activity-logs',
                   ),
                   const SizedBox(height: 8),
                   _buildNavItem(

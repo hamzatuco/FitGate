@@ -113,6 +113,7 @@ class FitGateAdminApp extends StatelessWidget {
         '/dashboard': (context) => const ShellScreen(currentRoute: '/dashboard'),
         '/members': (context) => const ShellScreen(currentRoute: '/members'),
         '/lockers': (context) => const ShellScreen(currentRoute: '/lockers'),
+        '/activity-logs': (context) => const ShellScreen(currentRoute: '/activity-logs'),
         '/admin-settings': (context) => const AdminSettingsScreen(),
         '/member/edit': (context) {
           final member = ModalRoute.of(context)?.settings.arguments as Member?;
