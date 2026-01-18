@@ -251,8 +251,6 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      print('✏️ Updated locker document with status=occupied');
-
       // Update member with locker details
       await _firestore.collection('members').doc(memberId).update({
         'assignedLockerId': lockerId,
@@ -263,12 +261,6 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      print('✏️ Updated member document:');
-      print('   - assignedLockerSector: $lockerSector');
-      print('   - assignedLockerNumber: $lockerNumber');
-      print('   - cardAssigned: true');
-      print('   - lastAccessTime: serverTimestamp');
-
       // Log activity
       await _logActivity(
         action: 'assign_locker',
@@ -276,8 +268,9 @@ class FirestoreService {
         memberName: memberData['name'],
         lockerId: lockerId,
         lockerNumber: lockerNumber,
+        lockerSector: lockerSector,
         staffId: staffId,
-        description: 'Ormar ${lockerNumber} asigniran članu ${memberData['name']}',
+        description: 'Ormar $lockerSector-$lockerNumber asigniran članu ${memberData['name']}',
         success: true,
       );
 
@@ -407,6 +400,7 @@ class FirestoreService {
     String? memberName,
     String? lockerId,
     String? lockerNumber,
+    String? lockerSector,
     String? staffId,
     String? staffName,
     required String description,
@@ -420,16 +414,17 @@ class FirestoreService {
         'memberId': memberId,
         'memberName': memberName,
         'lockerId': lockerId,
+        'lockerSector': lockerSector,
         'lockerNumber': lockerNumber,
         'staffId': staffId,
         'staffName': staffName,
         'description': description,
         'success': success,
         'errorMessage': errorMessage,
+        'status': 'completed',
       });
     } catch (e) {
       // Silently fail - don't throw on logging errors
-      print('Failed to log activity: $e');
     }
   }
 

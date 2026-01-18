@@ -187,14 +187,8 @@ class _LockersScreenState extends State<LockersScreen> {
       return;
     }
 
-    print('🔑 Pokušavam dodjelu ormara sa: $cardId');
-
     try {
-      print('📞 Pozivam assignLockerToMember...');
       final result = await _firestoreService.assignLockerToMember(cardId, 'staff-1');
-      
-      print('✅ Dodjela uspješna!');
-      print('   - Rezultat: $result');
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -209,7 +203,6 @@ class _LockersScreenState extends State<LockersScreen> {
         _loadLockers();
       }
     } catch (e) {
-      print('❌ Greška pri dodjeli: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

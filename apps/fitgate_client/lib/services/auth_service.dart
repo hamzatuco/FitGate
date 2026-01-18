@@ -189,15 +189,10 @@ class AuthService {
   /// Stream of current user profile with real-time updates
   Stream<MemberProfile?> getCurrentUserProfileStream() {
     final currentUser = _firebaseAuth.currentUser;
-    print('🔐 getCurrentUserProfileStream - currentUser: ${currentUser?.email}');
-    print('   UID: ${currentUser?.uid}');
     
     if (currentUser == null) {
-      print('❌ Korisnik nije prijavljen!');
       return Stream.value(null);
     }
-
-    print('📖 Kreiram query: members.where(uid == ${currentUser.uid})');
     
     // Kombinuj member stream sa locker stream-om
     return _firestore
@@ -206,27 +201,15 @@ class AuthService {
         .limit(1)
         .snapshots()
         .asyncExpand((memberSnapshot) {
-          print('\n📡 Member snapshot primljen - docs count: ${memberSnapshot.docs.length}');
-          
           if (memberSnapshot.docs.isEmpty) {
-            print('❌ Nema pronađenog dokumenta za uid: ${currentUser.uid}');
             return Stream.value(null);
           }
 
           final memberDoc = memberSnapshot.docs.first;
           final memberData = memberDoc.data();
           
-          print('\n📄 ========== MEMBER FIRESTORE PODACI ==========');
-          print('   Document ID: ${memberDoc.id}');
-          print('   Svi ključevi: ${memberData.keys.toList()}');
-          
           // Ako member ima assignedLockerSector, koristi te podatke
           if (memberData['assignedLockerSector'] != null && memberData['assignedLockerNumber'] != null) {
-            print('   ✅ Pronađeni locker podaci u member dokumentu');
-            print('   - assignedLockerSector: ${memberData['assignedLockerSector']}');
-            print('   - assignedLockerNumber: ${memberData['assignedLockerNumber']}');
-            print('========================================\n');
-
             // Provjeravamo da li je kartice dodijeljena
             bool hasCard = memberData['cardId'] != null && (memberData['cardId'] as String).isNotEmpty;
             
@@ -244,30 +227,19 @@ class AuthService {
               notificationCount: memberData['notificationCount'] ?? 0,
             );
             
-            print('✅ MemberProfile kreiran sa locker podacima iz member dokumenta');
             return Stream.value(profile);
           }
 
-          print('   ⚠️ Nema locker podataka u member dokumentu');
-          print('   📁 Tražim u lockers kolekciji sa assignedMemberId = ${memberDoc.id}...');
-          
+          // Nema locker podataka u member dokumentu, pokuša iz locker kolekcije
           return _firestore
               .collection('lockers')
               .where('assignedMemberId', isEqualTo: memberDoc.id)
               .limit(1)
               .snapshots()
               .map((lockerSnapshot) {
-                print('   📡 Locker snapshot - docs count: ${lockerSnapshot.docs.length}');
-                
                 if (lockerSnapshot.docs.isNotEmpty) {
                   final lockerDoc = lockerSnapshot.docs.first;
                   final lockerData = lockerDoc.data();
-                  
-                  print('   ✅ Pronađen locker u locker kolekciji!');
-                  print('   - lockerId: ${lockerDoc.id}');
-                  print('   - sector: ${lockerData['sector']}');
-                  print('   - number: ${lockerData['number']}');
-                  print('   - status: ${lockerData['status']}');
                   
                   // Provjeravamo da li je kartice dodijeljena - ako cardId polje nije null
                   bool hasCard = memberData['cardId'] != null && (memberData['cardId'] as String).isNotEmpty;
@@ -288,15 +260,8 @@ class AuthService {
                     notificationCount: memberData['notificationCount'] ?? 0,
                   );
                   
-                  print('✅ MemberProfile sa locker podacima:');
-                  print('   - assignedLockerSector: ${profileWithLocker.assignedLockerSector}');
-                  print('   - assignedLockerNumber: ${profileWithLocker.assignedLockerNumber}');
-                  print('   - cardId (raw): ${memberData['cardId']}');
-                  print('   - cardAssigned (calculated): ${profileWithLocker.cardAssigned}');
-                  
                   return profileWithLocker;
                 } else {
-                  print('   ❌ Nema lockera za ovog člana (assignedMemberId nema u lockers)');
                   return _buildMemberProfile(memberDoc.id, memberData, currentUser);
                 }
               });
@@ -322,10 +287,7 @@ class AuthService {
       notificationCount: memberData['notificationCount'] ?? 0,
     );
     
-    print('✅ MemberProfile kreiran:');
-    print('   - fullName: ${profile.fullName}');
-    print('   - status: ${profile.status}');
-    print('   - assignedLockerSector: ${profile.assignedLockerSector}');
+    return profile;
     print('   - assignedLockerNumber: ${profile.assignedLockerNumber}');
     print('   - lastCheckInTime: ${profile.lastCheckInTime}');
     print('   - cardId (raw): ${memberData['cardId']}');
