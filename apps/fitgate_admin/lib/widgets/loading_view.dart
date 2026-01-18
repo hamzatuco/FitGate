@@ -1,0 +1,36 @@
+import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+
+/// Loading view with Lottie animation and optional message
+class LoadingView extends StatelessWidget {
+  final String? message;
+
+  const LoadingView({Key? key, this.message}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Lottie.asset(
+            'assets/animations/dumbell.json',
+            width: 150,
+            height: 150,
+            repeat: true,
+          ),
+          if (message != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              message!,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
