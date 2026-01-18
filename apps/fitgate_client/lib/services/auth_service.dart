@@ -288,12 +288,6 @@ class AuthService {
     );
     
     return profile;
-    print('   - assignedLockerNumber: ${profile.assignedLockerNumber}');
-    print('   - lastCheckInTime: ${profile.lastCheckInTime}');
-    print('   - cardId (raw): ${memberData['cardId']}');
-    print('   - cardAssigned (calculated): ${profile.cardAssigned}');
-    
-    return profile;
   }
 
   /// Logout current user
