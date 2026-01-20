@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import '../services/auth_service.dart';
 
 /// Login screen for member authentication
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

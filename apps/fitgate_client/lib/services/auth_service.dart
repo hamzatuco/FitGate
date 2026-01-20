@@ -175,6 +175,7 @@ class AuthService {
         status: data['status'] ?? 'active',
         membershipValidUntil: (data['membershipValidUntil'] as Timestamp?)?.toDate() ??
             DateTime.now().add(const Duration(days: 30)),
+        assignedLockerId: data['assignedLockerId'],
         assignedLockerSector: data['assignedLockerSector'],
         assignedLockerNumber: data['assignedLockerNumber'],
         lastCheckInTime: (data['lastAccessTime'] as Timestamp?)?.toDate(),
@@ -220,6 +221,7 @@ class AuthService {
               status: memberData['status'] ?? 'active',
               membershipValidUntil: (memberData['membershipValidUntil'] as Timestamp?)?.toDate() ??
                   DateTime.now().add(const Duration(days: 30)),
+              assignedLockerId: memberData['assignedLockerId'],
               assignedLockerSector: memberData['assignedLockerSector'],
               assignedLockerNumber: memberData['assignedLockerNumber'],
               lastCheckInTime: (memberData['lastAccessTime'] as Timestamp?)?.toDate(),
@@ -252,6 +254,7 @@ class AuthService {
                     status: memberData['status'] ?? 'active',
                     membershipValidUntil: (memberData['membershipValidUntil'] as Timestamp?)?.toDate() ??
                         DateTime.now().add(const Duration(days: 30)),
+                    assignedLockerId: lockerDoc.id,
                     assignedLockerSector: lockerData['sector'],
                     assignedLockerNumber: lockerData['number'],
                     lastCheckInTime: (lockerData['lastAccessTime'] as Timestamp?)?.toDate() ?? 
@@ -280,6 +283,7 @@ class AuthService {
       status: memberData['status'] ?? 'active',
       membershipValidUntil: (memberData['membershipValidUntil'] as Timestamp?)?.toDate() ??
           DateTime.now().add(const Duration(days: 30)),
+      assignedLockerId: memberData['assignedLockerId'],
       assignedLockerSector: memberData['assignedLockerSector'],
       assignedLockerNumber: memberData['assignedLockerNumber'],
       lastCheckInTime: (memberData['lastAccessTime'] as Timestamp?)?.toDate(),
@@ -304,4 +308,55 @@ class AuthService {
 
   /// Get current user
   User? get currentUser => _firebaseAuth.currentUser;
+
+  /// Member reports a locker-related problem; stored in activityLogs
+  Future<void> reportProblem({
+    required MemberProfile profile,
+    required String description,
+  }) async {
+    if (description.trim().isEmpty) {
+      throw Exception('Opis problema je obavezan');
+    }
+
+    try {
+      String? lockerId;
+      String? lockerNumber = profile.assignedLockerNumber;
+      String? lockerSector = profile.assignedLockerSector;
+
+      // Try to fetch locker id if member has one assigned
+      if (profile.id.isNotEmpty) {
+        final lockerQuery = await _firestore
+            .collection('lockers')
+            .where('assignedMemberId', isEqualTo: profile.id)
+            .limit(1)
+            .get();
+
+        if (lockerQuery.docs.isNotEmpty) {
+          final lockerDoc = lockerQuery.docs.first;
+          final data = lockerDoc.data();
+          lockerId = lockerDoc.id;
+          lockerNumber = data['number']?.toString() ?? lockerNumber;
+          lockerSector = data['sector']?.toString() ?? lockerSector;
+        }
+      }
+
+      await _firestore.collection('activityLogs').add({
+        'action': 'problem_reported',
+        'description': description.trim(),
+        'memberId': profile.id,
+        'memberName': profile.fullName,
+        'lockerId': lockerId,
+        'lockerNumber': lockerNumber,
+        'lockerSector': lockerSector,
+        'staffId': null,
+        'staffName': null,
+        'status': 'completed',
+        'success': true,
+        'timestamp': FieldValue.serverTimestamp(),
+        'source': 'member_app',
+      });
+    } catch (e) {
+      throw Exception('Greška pri prijavi problema: $e');
+    }
+  }
 }

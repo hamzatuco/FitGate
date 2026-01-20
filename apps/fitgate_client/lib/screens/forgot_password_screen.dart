@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import '../services/auth_service.dart';
 
 /// Forgot password screen
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({Key? key}) : super(key: key);
+  const ForgotPasswordScreen({super.key});
 
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();

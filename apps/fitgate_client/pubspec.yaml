@@ -42,6 +42,10 @@ dependencies:
   
   # Google Fonts
   google_fonts: ^6.3.2
+  
+  # Shared package
+  fitgate_shared:
+    path: ../../shared/fitgate_shared
 
 dev_dependencies:
   flutter_test:

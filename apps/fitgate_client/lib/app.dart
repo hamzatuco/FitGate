@@ -4,9 +4,11 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/edit_profile_screen.dart';
+import 'models/member_profile.dart';
 
 class FitGateClientApp extends StatelessWidget {
-  const FitGateClientApp({Key? key}) : super(key: key);
+  const FitGateClientApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -104,6 +106,15 @@ class FitGateClientApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/edit-profile') {
+          final profile = settings.arguments as MemberProfile;
+          return MaterialPageRoute(
+            builder: (context) => EditProfileScreen(profile: profile),
+          );
+        }
+        return null;
       },
     );
   }

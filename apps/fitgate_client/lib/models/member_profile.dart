@@ -18,6 +18,7 @@ class MemberProfile {
   final String email;
   final String status; // 'active', 'expired', 'suspended'
   final DateTime membershipValidUntil;
+  final String? assignedLockerId;
   final String? assignedLockerSector;
   final String? assignedLockerNumber;
   final DateTime? lastCheckInTime;
@@ -30,6 +31,7 @@ class MemberProfile {
     required this.email,
     this.status = 'active',
     required this.membershipValidUntil,
+    this.assignedLockerId,
     this.assignedLockerSector,
     this.assignedLockerNumber,
     this.lastCheckInTime,

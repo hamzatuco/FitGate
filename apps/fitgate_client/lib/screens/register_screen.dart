@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import '../services/auth_service.dart';
 
 /// Registration screen for new members
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
