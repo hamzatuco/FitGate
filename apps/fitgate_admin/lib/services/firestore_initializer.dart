@@ -7,21 +7,17 @@ class FirestoreInitializer {
   /// Initialize all collections
   Future<void> initializeCollections() async {
     try {
-      print('🔧 Inicijalizujem Firestore kolekcije...');
       
       await createLockers();
       await createActivityLogs();
       
-      print('✅ Sve kolekcije su uspešno kreirane!');
     } catch (e) {
-      print('❌ Greška pri inicijalizaciji: $e');
       rethrow;
     }
   }
 
   /// Create lockers collection with sample data
   Future<void> createLockers() async {
-    print('\n📦 Kreiram ormare...');
     
     final sectors = ['A', 'B', 'C', 'D'];
     int counter = 0;
@@ -54,19 +50,16 @@ class FirestoreInitializer {
         if (counter % 100 == 0) {
           await batch.commit();
           batch = _firestore.batch();
-          print('  ✓ Napravljeno $counter ormara...');
         }
       }
     }
 
     // Commit remaining writes
     await batch.commit();
-    print('  ✓ Ukupno napravljeno: $counter ormara');
   }
 
   /// Create activity logs collection (initially empty)
   Future<void> createActivityLogs() async {
-    print('\n📋 Kreiram aktivnost log...');
 
     // Create a sample activity log entry to initialize the collection
     await _firestore.collection('activityLogs').add({
@@ -81,6 +74,5 @@ class FirestoreInitializer {
       'errorMessage': null,
     });
 
-    print('  ✓ ActivityLogs kolekcija je kreirana');
   }
 }

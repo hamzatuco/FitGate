@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/locker.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 
 /// Firestore service for managing members, lockers, and activity logs
 class FirestoreService {
@@ -91,6 +91,23 @@ class FirestoreService {
       );
     } catch (e) {
       throw Exception('Greška pri učitavanju člana: $e');
+    }
+  }
+
+  /// Get all member data including additional fields
+  Future<Map<String, dynamic>?> getMemberData(String memberId) async {
+    try {
+      DocumentSnapshot doc = await _firestore
+          .collection('members')
+          .doc(memberId)
+          .get();
+
+      if (!doc.exists) return null;
+
+      Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+      return data;
+    } catch (e) {
+      throw Exception('Greška pri učitavanju podataka člana: $e');
     }
   }
 

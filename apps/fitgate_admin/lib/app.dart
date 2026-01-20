@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import 'screens/login_screen.dart';
 import 'screens/member_edit_screen.dart';
+import 'screens/member_details_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/admin_settings_screen.dart';
-import 'models/locker.dart';
 
 /// Main app widget with routing configuration
 class FitGateAdminApp extends StatelessWidget {
@@ -115,6 +116,17 @@ class FitGateAdminApp extends StatelessWidget {
         '/lockers': (context) => const ShellScreen(currentRoute: '/lockers'),
         '/activity-logs': (context) => const ShellScreen(currentRoute: '/activity-logs'),
         '/admin-settings': (context) => const AdminSettingsScreen(),
+        '/member/details': (context) {
+          final member = ModalRoute.of(context)?.settings.arguments as Member?;
+          return MemberDetailsScreen(member: member ?? Member(
+            id: '',
+            name: '',
+            cardId: '',
+            status: 'active',
+            membershipValidUntil: DateTime.now(),
+            registeredAt: DateTime.now(),
+          ));
+        },
         '/member/edit': (context) {
           final member = ModalRoute.of(context)?.settings.arguments as Member?;
           return MemberEditScreen(member: member);
