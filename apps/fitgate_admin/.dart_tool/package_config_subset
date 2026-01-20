@@ -446,6 +446,10 @@ fitgate_admin
 3.8
 file:///C:/Users/hamza/OneDrive/Desktop/FitGate/apps/fitgate_admin/
 file:///C:/Users/hamza/OneDrive/Desktop/FitGate/apps/fitgate_admin/lib/
+fitgate_shared
+3.0
+file:///C:/Users/hamza/OneDrive/Desktop/FitGate/shared/fitgate_shared/
+file:///C:/Users/hamza/OneDrive/Desktop/FitGate/shared/fitgate_shared/lib/
 sky_engine
 3.7
 file:///C:/flutter/flutter/bin/cache/pkg/sky_engine/

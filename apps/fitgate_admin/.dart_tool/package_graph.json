@@ -11,6 +11,7 @@
         "cupertino_icons",
         "firebase_auth",
         "firebase_core",
+        "fitgate_shared",
         "flutter",
         "flutter_riverpod",
         "google_fonts",
@@ -75,6 +76,17 @@
         "test_api",
         "vector_math",
         "vm_service"
+      ]
+    },
+    {
+      "name": "fitgate_shared",
+      "version": "0.0.0",
+      "dependencies": [
+        "cloud_firestore",
+        "firebase_auth",
+        "flutter",
+        "intl",
+        "shared_preferences"
       ]
     },
     {
