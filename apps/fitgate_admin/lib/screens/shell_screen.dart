@@ -141,6 +141,13 @@ class ShellScreen extends StatelessWidget {
                     label: 'Podešavanja',
                     route: '/admin-settings',
                   ),
+                  const SizedBox(height: 8),
+                  _buildNavItem(
+                    context: context,
+                    icon: Icons.build_outlined,
+                    label: 'Admin Alati',
+                    route: '/admin-tools',
+                  ),
                   const Spacer(),
                   InkWell(
                     onTap: () => _logout(context),

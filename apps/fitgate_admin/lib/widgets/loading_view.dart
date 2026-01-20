@@ -5,7 +5,7 @@ import 'package:lottie/lottie.dart';
 class LoadingView extends StatelessWidget {
   final String? message;
 
-  const LoadingView({Key? key, this.message}) : super(key: key);
+  const LoadingView({super.key, this.message});
 
   @override
   Widget build(BuildContext context) {

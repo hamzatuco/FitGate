@@ -7,10 +7,10 @@ class StatusBadge extends StatelessWidget {
   final bool compact; // If true, shows smaller badge
 
   const StatusBadge({
-    Key? key,
+    super.key,
     required this.status,
     this.compact = false,
-  }) : super(key: key);
+  });
 
   Color _getBackgroundColor() {
     switch (status.toLowerCase()) {

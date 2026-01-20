@@ -28,6 +28,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadDashboard();
   }
 
+  String _getActionLabel(String? action) {
+    switch (action) {
+      case 'assign_locker':
+        return 'Ormaric dodijeljen';
+      case 'force_release':
+        return 'Ormaric skinut od strane admina';
+      case 'problem_reported':
+        return 'Prijavljen problem';
+      case 'mark_out_of_service':
+        return 'Ormaric izvan funkcije';
+      case 'suspend_member':
+        return 'Clanstvo suspendovano';
+      default:
+        return action ?? '';
+    }
+  }
+
   Future<void> _loadDashboard() async {
     setState(() => _isLoading = true);
     try {
@@ -163,12 +180,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         final timeStr = timestamp is DateTime
                                             ? '${timestamp.day}.${timestamp.month}.${timestamp.year} ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}'
                                             : (timestamp?.toString() ?? '-');
+                                        final isProblem = log['action'] == 'problem_reported';
+                                        final lockerValue = (log['lockerSector'] != null && log['lockerNumber'] != null)
+                                            ? '${log['lockerSector']}-${log['lockerNumber']}'
+                                            : (log['lockerId'] ?? '');
                                         
-                                        return DataRow(cells: [
+                                        return DataRow(
+                                          color: isProblem
+                                              ? MaterialStateProperty.all(Colors.red[200])
+                                              : null,
+                                          cells: [
                                           DataCell(Text(timeStr)),
-                                          DataCell(Text(log['action'] ?? '')),
+                                          DataCell(Text(_getActionLabel(log['action'] as String?))),
                                           DataCell(Text(log['memberName'] ?? '')),
-                                          DataCell(Text(log['lockerId'] ?? '')),
+                                          DataCell(Text(lockerValue)),
                                         ]);
                                       },
                                     )

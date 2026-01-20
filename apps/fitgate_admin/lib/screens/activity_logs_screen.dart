@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class ActivityLogsScreen extends StatefulWidget {
-  const ActivityLogsScreen({Key? key}) : super(key: key);
+  const ActivityLogsScreen({super.key});
 
   @override
   State<ActivityLogsScreen> createState() => _ActivityLogsScreenState();
@@ -13,8 +13,9 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String _selectedAction = 'All';
   String _selectedStatus = 'All';
+  bool _isDescending = true;
   
-  final List<String> _actionFilters = ['All', 'assign_locker', 'force_release', 'mark_out_of_service', 'suspend_member'];
+  final List<String> _actionFilters = ['All', 'assign_locker', 'force_release', 'mark_out_of_service', 'suspend_member', 'problem_reported'];
   final List<String> _statusFilters = ['All', 'completed', 'failed'];
 
   String _getActionLabel(String action) {
@@ -23,6 +24,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         return 'Dodjela ormara';
       case 'force_release':
         return 'Oslobađanje ormara';
+      case 'problem_reported':
+        return 'Prijavljen problem';
       case 'mark_out_of_service':
         return 'Ormar van usluge';
       case 'suspend_member':
@@ -38,6 +41,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         return Colors.green;
       case 'force_release':
         return Colors.orange;
+      case 'problem_reported':
+        return Colors.red;
       case 'mark_out_of_service':
         return Colors.red;
       case 'suspend_member':
@@ -67,44 +72,97 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                 // Action filter
                 SizedBox(
                   height: 40,
-                  child: FilterChip(
-                    label: Text(_selectedAction),
-                    onSelected: (_) => _showActionFilterDialog(),
-                    backgroundColor: Colors.grey[100],
-                    selectedColor: Colors.blue[100],
-                    selected: _selectedAction != 'All',
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButton<String>(
+                        value: _selectedAction,
+                        underline: const SizedBox.shrink(),
+                        icon: const Icon(Icons.expand_more, size: 18),
+                        items: _actionFilters.map((action) {
+                          return DropdownMenuItem(
+                            value: action,
+                            child: Text(action == 'All' ? 'Sve akcije' : _getActionLabel(action)),
+                          );
+                        }).toList(),
+                        onChanged: (val) => setState(() => _selectedAction = val ?? 'All'),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 // Status filter
                 SizedBox(
                   height: 40,
-                  child: FilterChip(
-                    label: Text(_selectedStatus),
-                    onSelected: (_) => _showStatusFilterDialog(),
-                    backgroundColor: Colors.grey[100],
-                    selectedColor: Colors.green[100],
-                    selected: _selectedStatus != 'All',
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: DropdownButton<String>(
+                        value: _selectedStatus,
+                        underline: const SizedBox.shrink(),
+                        icon: const Icon(Icons.expand_more, size: 18),
+                        items: _statusFilters.map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(status == 'All' ? 'Svi statusi' : status),
+                          );
+                        }).toList(),
+                        onChanged: (val) => setState(() => _selectedStatus = val ?? 'All'),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Sort order
+                SizedBox(
+                  height: 40,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: DropdownButton<bool>(
+                        value: _isDescending,
+                        underline: const SizedBox.shrink(),
+                        icon: const Icon(Icons.expand_more, size: 18),
+                        items: const [
+                          DropdownMenuItem(
+                            value: true,
+                            child: Text('Najnovije'),
+                          ),
+                          DropdownMenuItem(
+                            value: false,
+                            child: Text('Najstarije'),
+                          ),
+                        ],
+                        onChanged: (val) => setState(() => _isDescending = val ?? true),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 // Reset filters
                 if (_selectedAction != 'All' || _selectedStatus != 'All')
-                  SizedBox(
-                    height: 40,
-                    child: FilterChip(
-                      label: const Text('Očisti'),
-                      onSelected: (_) => setState(() {
-                        _selectedAction = 'All';
-                        _selectedStatus = 'All';
-                      }),
-                      backgroundColor: Colors.red[100],
-                      deleteIcon: const Icon(Icons.close),
-                      onDeleted: () => setState(() {
-                        _selectedAction = 'All';
-                        _selectedStatus = 'All';
-                      }),
-                    ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.red[700]),
+                    onPressed: () => setState(() {
+                      _selectedAction = 'All';
+                      _selectedStatus = 'All';
+                    }),
+                    tooltip: 'Očisti filtere',
                   ),
               ],
             ),
@@ -112,7 +170,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
           const Divider(height: 0),
           // Activity logs
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _buildQuery(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -123,7 +181,20 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                   return Center(child: Text('Greška: ${snapshot.error}'));
                 }
 
-                final docs = snapshot.data?.docs ?? [];
+                var docs = snapshot.data?.docs ?? [];
+
+                // Apply all filters client-side to avoid Firestore composite index requirements
+                if (_selectedAction != 'All') {
+                  docs = docs
+                      .where((d) => (d.data()['action'] as String? ?? '') == _selectedAction)
+                      .toList();
+                }
+
+                if (_selectedStatus != 'All') {
+                  docs = docs
+                      .where((d) => (d.data()['status'] as String? ?? '') == _selectedStatus)
+                      .toList();
+                }
 
                 if (docs.isEmpty) {
                   return const Center(
@@ -134,7 +205,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final log = docs[index].data() as Map<String, dynamic>;
+                    final log = docs[index].data();
                     return ActivityLogTile(
                       log: log,
                       actionColor: _getActionColor(log['action'] ?? ''),
@@ -150,54 +221,13 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
     );
   }
 
-  Stream<QuerySnapshot> _buildQuery() {
-    Query<Object?> query = _firestore.collection('activityLogs').orderBy('timestamp', descending: true);
-
-    if (_selectedAction != 'All') {
-      query = query.where('action', isEqualTo: _selectedAction);
-    }
-
-    if (_selectedStatus != 'All') {
-      query = query.where('status', isEqualTo: _selectedStatus);
-    }
-
-    return (query as CollectionReference<Map<String, dynamic>>).limit(100).snapshots();
-  }
-
-  void _showActionFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Filtriraj po akciji'),
-        children: _actionFilters.map((action) {
-          return SimpleDialogOption(
-            onPressed: () {
-              setState(() => _selectedAction = action);
-              Navigator.pop(context);
-            },
-            child: Text(action == 'All' ? 'Sve akcije' : _getActionLabel(action)),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  void _showStatusFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Filtriraj po statusu'),
-        children: _statusFilters.map((status) {
-          return SimpleDialogOption(
-            onPressed: () {
-              setState(() => _selectedStatus = status);
-              Navigator.pop(context);
-            },
-            child: Text(status == 'All' ? 'Svi statusi' : status),
-          );
-        }).toList(),
-      ),
-    );
+  Stream<QuerySnapshot<Map<String, dynamic>>> _buildQuery() {
+    // No where clauses - all filtering done client-side to avoid composite index
+    return _firestore
+        .collection('activityLogs')
+        .orderBy('timestamp', descending: _isDescending)
+        .limit(100)
+        .snapshots();
   }
 }
 
@@ -218,16 +248,25 @@ class ActivityLogTile extends StatelessWidget {
     final timestamp = (log['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
     final timeString = DateFormat('HH:mm:ss  dd.MM.yyyy').format(timestamp);
     final success = log['success'] as bool? ?? false;
+    final isProblem = (log['action'] as String?) == 'problem_reported';
     final description = log['description'] as String? ?? 'Nema opisa';
     
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       elevation: 0,
-      color: success ? Colors.green[50] : Colors.red[50],
+      color: isProblem
+          ? Colors.red[50]
+          : success
+              ? Colors.green[50]
+              : Colors.red[50],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
-          color: success ? Colors.green[200]! : Colors.red[200]!,
+          color: isProblem
+              ? Colors.red[300]!
+              : success
+                  ? Colors.green[200]!
+                  : Colors.red[200]!,
           width: 1,
         ),
       ),
@@ -236,6 +275,43 @@ class ActivityLogTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (isProblem)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.report, color: Colors.red, size: 18),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Prijavljen problem',
+                          style: TextStyle(
+                            color: Colors.red[800],
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Hitno',
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Header: Action + Status
             Row(
               children: [
@@ -261,13 +337,25 @@ class ActivityLogTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: success ? Colors.green[100] : Colors.red[100],
+                    color: isProblem
+                        ? Colors.red[100]
+                        : success
+                            ? Colors.green[100]
+                            : Colors.red[100],
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    success ? '✓ Uspješna' : '✗ Greška',
+                    isProblem
+                        ? 'Problem'
+                        : success
+                            ? '✓ Uspješna'
+                            : '✗ Greška',
                     style: TextStyle(
-                      color: success ? Colors.green[700] : Colors.red[700],
+                      color: isProblem
+                          ? Colors.red[700]
+                          : success
+                              ? Colors.green[700]
+                              : Colors.red[700],
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),

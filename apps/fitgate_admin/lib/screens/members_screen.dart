@@ -1,6 +1,6 @@
 import 'package:fitgate_admin/services/firestore_service.dart';
 import 'package:flutter/material.dart';
-import '../models/locker.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/empty_view.dart';
 import '../widgets/status_badge.dart';
@@ -212,9 +212,10 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: DataTable(
+                                showCheckboxColumn: false,
                                 columns: const [
                                   DataColumn(label: Text('Ime')),
-                                  DataColumn(label: Text('Email')),
+                                  DataColumn(label: Text('RFID Kartica')),
                                   DataColumn(label: Text('Status')),
                                   DataColumn(label: Text('Ormar')),
                                   DataColumn(label: Text('Važeći Do')),
@@ -222,21 +223,28 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
                                 ],
                                 rows: _filteredMembers
                                     .map(
-                                      (member) => DataRow(cells: [
-                                        DataCell(Text(member.name)),
-                                        DataCell(Text(member.cardId)),
-                                        DataCell(
-                                          StatusBadge(status: member.status),
-                                        ),
-                                        DataCell(
-                                          Text(member.assignedLocker ?? 'N/A'),
-                                        ),
-                                        DataCell(
-                                          Text(member.membershipValidUntil
-                                              .toString()
-                                              .split(' ')[0]),
-                                        ),
-                                        DataCell(
+                                      (member) => DataRow(
+                                        onSelectChanged: (_) {
+                                          Navigator.of(context).pushNamed(
+                                            '/member/details',
+                                            arguments: member,
+                                          );
+                                        },
+                                        cells: [
+                                          DataCell(Text(member.name)),
+                                          DataCell(Text(member.cardId)),
+                                          DataCell(
+                                            StatusBadge(status: member.status),
+                                          ),
+                                          DataCell(
+                                            Text(member.assignedLocker ?? 'N/A'),
+                                          ),
+                                          DataCell(
+                                            Text(member.membershipValidUntil
+                                                .toString()
+                                                .split(' ')[0]),
+                                          ),
+                                          DataCell(
                                           Row(
                                             children: [
                                               TextButton(
@@ -262,7 +270,8 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
                                             ],
                                           ),
                                         ),
-                                      ]),
+                                      ],
+                                      ),
                                     )
                                     .toList(),
                               ),

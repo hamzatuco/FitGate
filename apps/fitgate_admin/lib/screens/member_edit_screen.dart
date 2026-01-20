@@ -1,6 +1,6 @@
 import 'package:fitgate_admin/services/firestore_service.dart';
 import 'package:flutter/material.dart';
-import '../models/locker.dart';
+import 'package:fitgate_shared/fitgate_shared.dart';
 import '../widgets/loading_view.dart';
 
 /// Member registration and edit screen

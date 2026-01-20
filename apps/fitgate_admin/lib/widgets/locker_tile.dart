@@ -12,7 +12,7 @@ class LockerTile extends StatelessWidget {
   final VoidCallback? onMarkOutOfService;
 
   const LockerTile({
-    Key? key,
+    super.key,
     required this.lockerNumber,
     required this.sector,
     required this.status,
@@ -20,7 +20,7 @@ class LockerTile extends StatelessWidget {
     this.onTap,
     this.onForceRelease,
     this.onMarkOutOfService,
-  }) : super(key: key);
+  });
 
   Color _getStatusColor() {
     switch (status.toLowerCase()) {
