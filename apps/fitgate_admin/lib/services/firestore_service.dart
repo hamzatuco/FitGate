@@ -303,6 +303,173 @@ class FirestoreService {
     }
   }
 
+  /// Assign specific locker to member by member ID and locker ID
+  Future<Map<String, dynamic>> assignSpecificLockerToMember({
+    required String memberId,
+    required String lockerId,
+    required String staffId,
+  }) async {
+    try {
+      // Get member data
+      DocumentSnapshot memberDoc = await _firestore.collection('members').doc(memberId).get();
+      if (!memberDoc.exists) {
+        throw Exception('Član nije pronađen');
+      }
+      
+      Map<String, dynamic> memberData = memberDoc.data() as Map<String, dynamic>;
+
+      // Get locker data
+      DocumentSnapshot lockerDoc = await _firestore.collection('lockers').doc(lockerId).get();
+      if (!lockerDoc.exists) {
+        throw Exception('Ormar nije pronađen');
+      }
+      
+      Map<String, dynamic> lockerData = lockerDoc.data() as Map<String, dynamic>;
+      String lockerNumber = lockerData['number'] ?? 'N/A';
+      String lockerSector = lockerData['sector'] ?? 'N/A';
+
+      // Check if locker is available
+      if (lockerData['status'] != 'free') {
+        throw Exception('Ormar nije dostupan (status: ${lockerData['status']})');
+      }
+
+      // Check if member already has a locker
+      if (memberData['assignedLockerId'] != null) {
+        throw Exception('Član već ima asigniran ormar ${memberData['assignedLockerNumber']}');
+      }
+
+      // Update locker
+      await _firestore.collection('lockers').doc(lockerId).update({
+        'status': 'occupied',
+        'assignedMemberId': memberId,
+        'currentMember': memberData['name'] ?? 'Unknown',
+        'lastAccessTime': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update member with locker details
+      await _firestore.collection('members').doc(memberId).update({
+        'assignedLockerId': lockerId,
+        'assignedLockerSector': lockerSector,
+        'assignedLockerNumber': lockerNumber,
+        'lastAccessTime': FieldValue.serverTimestamp(),
+        'cardAssigned': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Log activity
+      await logActivity(
+        action: 'assign_locker',
+        memberId: memberId,
+        memberName: memberData['name'],
+        lockerId: lockerId,
+        lockerNumber: lockerNumber,
+        lockerSector: lockerSector,
+        staffId: staffId,
+        description: 'Ormar $lockerSector-$lockerNumber asigniran članu ${memberData['name']}',
+        success: true,
+      );
+
+      return {
+        'success': true,
+        'memberId': memberId,
+        'memberName': memberData['name'],
+        'lockerId': lockerId,
+        'lockerNumber': lockerNumber,
+        'lockerSector': lockerSector,
+      };
+    } catch (e) {
+      throw Exception('Greška pri asignaciji ormara: $e');
+    }
+  }
+
+  /// Assign specific locker to member by RFID card ID
+  Future<Map<String, dynamic>> assignSpecificLockerByRFID({
+    required String cardId,
+    required String lockerId,
+    required String staffId,
+  }) async {
+    try {
+      // Find member by card ID
+      QuerySnapshot memberSnapshot = await _firestore
+          .collection('members')
+          .where('cardId', isEqualTo: cardId)
+          .limit(1)
+          .get();
+
+      if (memberSnapshot.docs.isEmpty) {
+        throw Exception('Član sa tom karticom nije pronađen');
+      }
+
+      final memberDoc = memberSnapshot.docs.first;
+      String memberId = memberDoc.id;
+      Map<String, dynamic> memberData = memberDoc.data() as Map<String, dynamic>;
+
+      // Get locker data
+      DocumentSnapshot lockerDoc = await _firestore.collection('lockers').doc(lockerId).get();
+      if (!lockerDoc.exists) {
+        throw Exception('Ormar nije pronađen');
+      }
+      
+      Map<String, dynamic> lockerData = lockerDoc.data() as Map<String, dynamic>;
+      String lockerNumber = lockerData['number'] ?? 'N/A';
+      String lockerSector = lockerData['sector'] ?? 'N/A';
+
+      // Check if locker is available
+      if (lockerData['status'] != 'free') {
+        throw Exception('Ormar nije dostupan (status: ${lockerData['status']})');
+      }
+
+      // Check if member already has a locker
+      if (memberData['assignedLockerId'] != null) {
+        throw Exception('Član ${memberData['name']} već ima asigniran ormar ${memberData['assignedLockerNumber']}');
+      }
+
+      // Update locker
+      await _firestore.collection('lockers').doc(lockerId).update({
+        'status': 'occupied',
+        'assignedMemberId': memberId,
+        'currentMember': memberData['name'] ?? 'Unknown',
+        'lastAccessTime': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update member with locker details
+      await _firestore.collection('members').doc(memberId).update({
+        'assignedLockerId': lockerId,
+        'assignedLockerSector': lockerSector,
+        'assignedLockerNumber': lockerNumber,
+        'lastAccessTime': FieldValue.serverTimestamp(),
+        'cardAssigned': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Log activity
+      await logActivity(
+        action: 'assign_locker',
+        memberId: memberId,
+        memberName: memberData['name'],
+        lockerId: lockerId,
+        lockerNumber: lockerNumber,
+        lockerSector: lockerSector,
+        staffId: staffId,
+        description: 'Ormar $lockerSector-$lockerNumber asigniran članu ${memberData['name']}',
+        success: true,
+      );
+
+      return {
+        'success': true,
+        'memberId': memberId,
+        'memberName': memberData['name'],
+        'lockerId': lockerId,
+        'lockerNumber': lockerNumber,
+        'lockerSector': lockerSector,
+      };
+    } catch (e) {
+      throw Exception('Greška pri asignaciji ormara: $e');
+    }
+  }
+
   /// Force release locker (staff action)
   Future<void> forceReleaseLocker(
     String lockerId,
@@ -527,6 +694,165 @@ class FirestoreService {
       };
     } catch (e) {
       throw Exception('Greška pri učitavanju statistike: $e');
+    }
+  }
+
+  // ============ LOCKER ACCESS VERIFICATION ============
+
+  /// Verify if RFID card is authorized for locker access
+  /// Returns member info and locker info if authorized
+  Future<Map<String, dynamic>?> verifyRFIDAccess({
+    required String cardId,
+    required String lockerId,
+  }) async {
+    try {
+      // Find member by card ID
+      QuerySnapshot memberSnapshot = await _firestore
+          .collection('members')
+          .where('cardId', isEqualTo: cardId)
+          .limit(1)
+          .get();
+
+      if (memberSnapshot.docs.isEmpty) {
+        return null; // Card not found
+      }
+
+      final memberDoc = memberSnapshot.docs.first;
+      String memberId = memberDoc.id;
+      Map<String, dynamic> memberData = memberDoc.data() as Map<String, dynamic>;
+
+      // Check if member is active
+      if (memberData['status'] != 'active') {
+        return null; // Member not active
+      }
+
+      // Check membership validity
+      DateTime membershipUntil = (memberData['membershipValidUntil'] as Timestamp?)?.toDate() ?? DateTime.now();
+      if (membershipUntil.isBefore(DateTime.now())) {
+        return null; // Membership expired
+      }
+
+      // Get locker data
+      DocumentSnapshot lockerDoc = await _firestore.collection('lockers').doc(lockerId).get();
+      if (!lockerDoc.exists) {
+        return null;
+      }
+
+      Map<String, dynamic> lockerData = lockerDoc.data() as Map<String, dynamic>;
+
+      // Check if locker is occupied by this member
+      if (lockerData['assignedMemberId'] != memberId) {
+        return null; // Locker not assigned to this member
+      }
+
+      // Check if locker is in service
+      if (lockerData['status'] != 'occupied') {
+        return null; // Locker not available
+      }
+
+      // Authorized! Create locker session
+      await _createLockerSession(
+        lockerId: lockerId,
+        memberId: memberId,
+        cardId: cardId,
+      );
+
+      return {
+        'authorized': true,
+        'memberId': memberId,
+        'memberName': memberData['name'],
+        'lockerId': lockerId,
+        'lockerNumber': lockerData['number'],
+        'lockerSector': lockerData['sector'],
+      };
+    } catch (e) {
+      throw Exception('Greška pri verifikaciji pristupa: $e');
+    }
+  }
+
+  /// Create a locker session record
+  Future<void> _createLockerSession({
+    required String lockerId,
+    required String memberId,
+    required String cardId,
+  }) async {
+    try {
+      await _firestore.collection('lockerSessions').add({
+        'lockerId': lockerId,
+        'assignedUserId': memberId,
+        'authorizedUid': cardId,
+        'createdAt': FieldValue.serverTimestamp(),
+        'accessType': 'rfid',
+        'status': 'active',
+      });
+    } catch (e) {
+      // Log error but don't throw - access should still be granted
+      print('Greška pri kreiranju locker sesije: $e');
+    }
+  }
+
+  /// Close a locker session (when member releases the locker)
+  Future<void> closeLockerSession(String lockerId, String memberId) async {
+    try {
+      // Find active session for this locker and member
+      QuerySnapshot sessionSnapshot = await _firestore
+          .collection('lockerSessions')
+          .where('lockerId', isEqualTo: lockerId)
+          .where('assignedUserId', isEqualTo: memberId)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (sessionSnapshot.docs.isNotEmpty) {
+        await _firestore
+            .collection('lockerSessions')
+            .doc(sessionSnapshot.docs.first.id)
+            .update({
+          'closedAt': FieldValue.serverTimestamp(),
+          'status': 'closed',
+        });
+      }
+    } catch (e) {
+      print('Greška pri zatvaranju sesije: $e');
+    }
+  }
+
+  /// Log failed access attempt
+  Future<void> logFailedAccessAttempt({
+    required String lockerId,
+    required String cardId,
+    required String reason,
+  }) async {
+    try {
+      await _firestore.collection('accessAttempts').add({
+        'lockerId': lockerId,
+        'cardId': cardId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'success': false,
+        'reason': reason,
+      });
+    } catch (e) {
+      print('Greška pri logiranju neuspješnog pokušaja: $e');
+    }
+  }
+
+  /// Get active locker sessions for a member
+  Future<List<Map<String, dynamic>>> getActiveMemberSessions(String memberId) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('lockerSessions')
+          .where('assignedUserId', isEqualTo: memberId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      return snapshot.docs
+          .map((doc) => {
+                'sessionId': doc.id,
+                ...(doc.data() as Map<String, dynamic>)
+              })
+          .toList();
+    } catch (e) {
+      throw Exception('Greška pri učitavanju sesija: $e');
     }
   }
 }
