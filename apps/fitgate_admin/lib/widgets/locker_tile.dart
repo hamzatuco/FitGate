@@ -10,6 +10,7 @@ class LockerTile extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onForceRelease;
   final VoidCallback? onMarkOutOfService;
+  final VoidCallback? onAssignMember;
 
   const LockerTile({
     super.key,
@@ -20,6 +21,7 @@ class LockerTile extends StatelessWidget {
     this.onTap,
     this.onForceRelease,
     this.onMarkOutOfService,
+    this.onAssignMember,
   });
 
   Color _getStatusColor() {
@@ -101,6 +103,23 @@ class LockerTile extends StatelessWidget {
                     ),
                     child: const Text(
                       'Release',
+                      style: TextStyle(fontSize: 9, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ] else if (status == 'free') ...[
+                const SizedBox(height: 6),
+                SizedBox(
+                  width: double.infinity,
+                  height: 24,
+                  child: ElevatedButton(
+                    onPressed: onAssignMember,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
+                    child: const Text(
+                      'Asigniraj',
                       style: TextStyle(fontSize: 9, color: Colors.white),
                     ),
                   ),
