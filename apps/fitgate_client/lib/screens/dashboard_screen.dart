@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
 import '../models/member_profile.dart';
+import '../models/notification_item.dart';
 import '../services/auth_service.dart';
 
 /// Dashboard screen showing member profile
@@ -12,6 +13,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+    bool _showAllNotifications = false;
   final _authService = AuthService();
   late Stream<MemberProfile?> _profileStream;
   final List<String> _problemPresets = const [
@@ -602,63 +604,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                         ),
+                      if (!_showAllNotifications)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _showAllNotifications = true;
+                            });
+                          },
+                          child: const Text('View more'),
+                        ),
+                      if (_showAllNotifications)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _showAllNotifications = false;
+                            });
+                          },
+                          child: const Text('Show less'),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   // Notifications list
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: profile.notificationCount > 0
-                        ? Column(
-                            children: [
-                              _buildNotificationTile(
-                                icon: Icons.calendar_today,
-                                title: 'Članarina ističe uskoro',
-                                subtitle: 'Vaša članarina ističe za ${profile.membershipValidUntil.difference(DateTime.now()).inDays} dana',
-                                color: Colors.orange,
-                                time: '2 dana',
-                              ),
-                              Divider(height: 1, color: Colors.grey[200]),
-                              _buildNotificationTile(
-                                icon: Icons.campaign,
-                                title: 'Nova oprema u teretani',
-                                subtitle: 'Dodali smo nove sprave za kardio vježbe',
-                                color: Colors.blue,
-                                time: '5 dana',
-                              ),
-                            ],
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.all(40),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.notifications_none,
-                                  size: 48,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Nema novih obavještenja',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
+                  StreamBuilder<List<NotificationItem>>(
+                    stream: _authService.notificationsStream(profile.id),
+                    builder: (context, notifSnapshot) {
+                      if (notifSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final notifs = notifSnapshot.data ?? [];
+                      final visibleNotifs = _showAllNotifications ? notifs : notifs.take(3).toList();
+                      return Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
+                          ],
+                        ),
+                        child: visibleNotifs.isNotEmpty
+                            ? Column(
+                                children: [
+                                  for (final notif in visibleNotifs)
+                                    Container(
+                                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: notif.type == 'fail' ? Colors.red : Colors.green,
+                                          width: 2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        color: notif.type == 'fail' ? Colors.red[50] : Colors.green[50],
+                                      ),
+                                      child: ListTile(
+                                        leading: Icon(
+                                          notif.type == 'success' ? Icons.check_circle : Icons.error,
+                                          color: notif.type == 'success' ? Colors.green : Colors.red,
+                                        ),
+                                        title: Text(
+                                          notif.type == 'success' ? 'Uspješan pristup' : 'Neuspješan pokušaj',
+                                          style: TextStyle(
+                                            color: notif.type == 'success' ? Colors.green[800] : Colors.red[800],
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        subtitle: Text(notif.message),
+                                        trailing: notif.timestamp != null
+                                            ? Text(
+                                                '${notif.timestamp!.day}.${notif.timestamp!.month}.${notif.timestamp!.year}',
+                                                style: const TextStyle(fontSize: 12),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                ],
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.all(40),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_none,
+                                      size: 48,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Nema novih obavještenja',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
 

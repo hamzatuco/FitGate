@@ -1,9 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fitgate_client/models/notification_item.dart';
 import '../models/member_profile.dart';
 
 /// Authentication service with Firebase integration
 class AuthService {
+    /// Stream notifikacija iz podkolekcije
+    Stream<List<NotificationItem>> notificationsStream(String memberId) {
+      return _firestore
+          .collection('members')
+          .doc(memberId)
+          .collection('notifications')
+          .orderBy('timestamp', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => NotificationItem.fromFirestore(doc))
+              .toList());
+    }
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -228,7 +241,6 @@ class AuthService {
               cardAssigned: hasCard,
               notificationCount: memberData['notificationCount'] ?? 0,
             );
-            
             return Stream.value(profile);
           }
 
@@ -253,15 +265,15 @@ class AuthService {
                     email: memberData['email'] ?? currentUser.email ?? '',
                     status: memberData['status'] ?? 'active',
                     membershipValidUntil: (memberData['membershipValidUntil'] as Timestamp?)?.toDate() ??
-                        DateTime.now().add(const Duration(days: 30)),
+                      DateTime.now().add(const Duration(days: 30)),
                     assignedLockerId: lockerDoc.id,
                     assignedLockerSector: lockerData['sector'],
                     assignedLockerNumber: lockerData['number'],
                     lastCheckInTime: (lockerData['lastAccessTime'] as Timestamp?)?.toDate() ?? 
-                        (memberData['lastAccessTime'] as Timestamp?)?.toDate(),
+                      (memberData['lastAccessTime'] as Timestamp?)?.toDate(),
                     cardAssigned: hasCard,
                     notificationCount: memberData['notificationCount'] ?? 0,
-                  );
+                    );
                   
                   return profileWithLocker;
                 } else {
@@ -290,7 +302,6 @@ class AuthService {
       cardAssigned: hasCard,
       notificationCount: memberData['notificationCount'] ?? 0,
     );
-    
     return profile;
   }
 
