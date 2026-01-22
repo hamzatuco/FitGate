@@ -241,6 +241,104 @@ class _LockersScreenState extends State<LockersScreen> {
     }
   }
 
+  Future<void> _assignSpecificLockerToMember(Locker locker) async {
+    // Show dialog to enter RFID card
+    String cardId = '';
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Asigniraj Ormar'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Ormar: ${locker.sector}-${locker.number}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Unesi RFID karticu člana:'),
+            const SizedBox(height: 12),
+            TextField(
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'RFID kartice',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onChanged: (value) => cardId = value,
+              onSubmitted: (value) {
+                cardId = value;
+                Navigator.pop(context);
+                _assignLockerByRFID(locker.id, cardId);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Otkaži'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              if (cardId.isNotEmpty) {
+                _assignLockerByRFID(locker.id, cardId);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Molim unesi RFID karticu'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              }
+            },
+            child: const Text('Asigniraj'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _assignLockerByRFID(String lockerId, String cardId) async {
+    try {
+      final result = await _firestoreService.assignSpecificLockerByRFID(
+        cardId: cardId,
+        lockerId: lockerId,
+        staffId: 'staff-1',
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Ormar ${result['lockerSector']}-${result['lockerNumber']} asigniran članu ${result['memberName']}',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        _loadLockers();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Greška pri dodjeli: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -368,6 +466,10 @@ class _LockersScreenState extends State<LockersScreen> {
                                 onMarkOutOfService: locker.status != 'out_of_service'
                                     ? () =>
                                         _markOutOfService(locker)
+                                    : null,
+                                onAssignMember: locker.status == 'free'
+                                    ? () =>
+                                        _assignSpecificLockerToMember(locker)
                                     : null,
                               );
                             },
