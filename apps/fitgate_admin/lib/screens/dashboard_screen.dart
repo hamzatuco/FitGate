@@ -187,7 +187,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         
                                         return DataRow(
                                           color: isProblem
-                                              ? MaterialStateProperty.all(Colors.red[200])
+                                              ? WidgetStateProperty.all(Colors.red[200])
                                               : null,
                                           cells: [
                                           DataCell(Text(timeStr)),

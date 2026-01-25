@@ -1,4 +1,4 @@
-include <ESP8266WiFi.h>
+#include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <SPI.h>
@@ -26,6 +26,10 @@ const char* LOCKER_ID = "2FGYXSAkk3ip944zwzGs";
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 WiFiClientSecure client;
+
+// --- GLOBAL VARS FOR POLLING ---
+unsigned long lastPollTime = 0;
+const unsigned long pollInterval = 5000; // 5 sekundi
 
 void setup() {
   Serial.begin(9600);
@@ -86,44 +90,91 @@ void setup() {
   Serial.println("Ready to scan RFID cards...");
 }
 
+
+
 void loop() {
-  // Provjeri da li je kartica prisutna
-  if (!rfid.PICC_IsNewCardPresent()) {
-    return;
+  // ...existing code...
+  // delay(1000); // možeš vratiti ako želiš pauzu
+  // RFID logika (ostaje kao prije)
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    String cardId = "";
+    for (byte i = 0; i < rfid.uid.size; i++) {
+      cardId += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
+      cardId += String(rfid.uid.uidByte[i], HEX);
+    }
+    cardId.toUpperCase();
+    tone(BUZZER_PIN, 1200, 80);
+    delay(90);
+    Serial.println("\n==============================");
+    Serial.print("[RFID] Kartica: ");
+    Serial.println(cardId);
+    Serial.println("------------------------------");
+    bool authorized = verifyAccess(cardId);
+    if (authorized) {
+      grantAccess();
+    } else {
+      denyAccess();
+    }
+    Serial.println("==============================\n");
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+    delay(2000);
   }
-  
-  if (!rfid.PICC_ReadCardSerial()) {
-    return;
-  }
-  
-  // Pročitaj UID kartice
-  String cardId = "";
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    cardId += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
-    cardId += String(rfid.uid.uidByte[i], HEX);
-  }
-  cardId.toUpperCase();
 
-  // Kratki beep na skeniranje
-  tone(BUZZER_PIN, 1200, 80);
-  delay(90);
+  // Pollaj lockerOpenRequests svakih 5 sekundi
+  unsigned long now = millis();
+  if (now - lastPollTime > pollInterval) {
+    lastPollTime = now;
+    pollLockerOpenRequests();
+  }
+}
 
-  Serial.println("\n==============================");
-  Serial.print("[RFID] Kartica: ");
-  Serial.println(cardId);
-  Serial.println("------------------------------");
-  // Verifikuj preko Firebase
-  bool authorized = verifyAccess(cardId);
-  if (authorized) {
-    grantAccess();
+void pollLockerOpenRequests() {
+  if (WiFi.status() != WL_CONNECTED) return;
+  HTTPClient http;
+  String url = "https://firestore.googleapis.com/v1/projects/fitgate-iot/databases/(default)/documents/lockerOpenRequests?pageSize=5&orderBy=requestedAt%20desc";
+  http.begin(client, url);
+  int httpCode = http.GET();
+  if (httpCode == 200) {
+    String response = http.getString();
+    Serial.println(response);
+    StaticJsonDocument<4096> doc;
+    DeserializationError err = deserializeJson(doc, response);
+    if (!err) {
+      JsonArray docs = doc["documents"];
+      for (JsonObject d : docs) {
+        String lockerId = d["fields"]["lockerId"]["stringValue"];
+        String status = d["fields"]["status"]["stringValue"];
+        Serial.print("Firestore: lockerId="); Serial.print(lockerId);
+        Serial.print(", status="); Serial.println(status);
+        if (lockerId == LOCKER_ID && status == "pending") {
+          Serial.println("[API] Zahtjev za otvaranje ormarica iz aplikacije!");
+          grantAccess();
+          // PATCH status na 'completed'
+          String docName = d["name"].as<String>();
+          markLockerRequestCompleted(docName);
+          break; // Samo jedan zahtjev po pollu
+        }
+      }
+    }
+  }
+  http.end();
+}
+
+void markLockerRequestCompleted(String docName) {
+  HTTPClient http;
+  String url = "https://firestore.googleapis.com/v1/" + docName;
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/json");
+  String payload = "{\"fields\":{\"status\":{\"stringValue\":\"completed\"}}}";
+  int httpCode = http.PATCH(payload);
+  if (httpCode == 200) {
+    Serial.println("[API] Locker request marked as completed.");
   } else {
-    denyAccess();
+    Serial.print("[API] Failed to mark request completed: ");
+    Serial.println(httpCode);
   }
-  Serial.println("==============================\n");
-  // Zaustavi čitanje
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
-  delay(2000);  // Pauza prije sljedećeg skeniranja
+  http.end();
 }
 
 bool verifyAccess(String cardId) {

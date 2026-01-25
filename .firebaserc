@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "fitgate-iot"
+  },
+  "targets": {
+    "fitgate-iot": {
+      "hosting": {
+        "fitgate-client": [
+          "fitgate-iot"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

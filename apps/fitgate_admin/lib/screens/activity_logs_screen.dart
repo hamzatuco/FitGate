@@ -237,11 +237,11 @@ class ActivityLogTile extends StatelessWidget {
   final String actionLabel;
 
   const ActivityLogTile({
-    Key? key,
+    super.key,
     required this.log,
     required this.actionColor,
     required this.actionLabel,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -436,10 +436,9 @@ class _DetailChip extends StatelessWidget {
   final String value;
 
   const _DetailChip({
-    Key? key,
     required this.label,
     required this.value,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
