@@ -14,6 +14,14 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
+String _monthShortName(int month) {
+  const months = [
+    'jan', 'feb', 'mar', 'apr', 'maj', 'jun',
+    'jul', 'avg', 'sep', 'okt', 'nov', 'dec'
+  ];
+  return months[(month - 1).clamp(0, 11)];
+}
+
 class _DashboardScreenState extends State<DashboardScreen> {
     bool _isClearingNotifications = false;
 
@@ -347,8 +355,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Moj Profil'),
+            title: Text('FitGate'),
             elevation: 0,
+            automaticallyImplyLeading: false,
             flexibleSpace: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -362,14 +371,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
                 colors: [
-                  Colors.blue.shade50.withOpacity(0.4),
+                  Colors.blue.shade50.withOpacity(0.6),
+                  Colors.purple.shade50.withOpacity(0.3),
                   const Color(0xFFf8fafc),
                   Colors.white,
                 ],
-                stops: const [0.0, 0.35, 1.0],
+                stops: const [0.0, 0.25, 0.5, 1.0],
               ),
             ),
             child: SingleChildScrollView(
@@ -378,237 +388,427 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Member profile card
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
+                  // Modern, tight profile card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey[200]!, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.07),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: const Color(0xFFE5E7EB),
+                        width: 1,
+                      ),
                     ),
-                    color: Colors.white,
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Row(
-                        children: [
-                          // Avatar
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.blue[300]!,
-                                  Colors.blue[700]!,
-                                ],
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                profile.fullName
-                                    .split(' ')
-                                    .where((e) => e.trim().isNotEmpty)
-                                    .take(2)
-                                    .map((e) => e[0].toUpperCase())
-                                    .join(),
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Avatar
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFE0F7FF),
+                          ),
+                          child: Center(
+                            child: Text(
+                              profile.fullName
+                                  .split(' ')
+                                  .where((e) => e.trim().isNotEmpty)
+                                  .take(2)
+                                  .map((e) => e[0].toUpperCase())
+                                  .join(),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0B5ED7),
+                                letterSpacing: 1,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 20),
-                          // Member info
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  profile.fullName,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  profile.email,
-                                  style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                                ),
-                                const SizedBox(height: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(profile.status).withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _getStatusLabel(profile.status),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: _getStatusColor(profile.status),
+                        ),
+                        const SizedBox(width: 16),
+                        // Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      profile.fullName,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F172A),
+                                        letterSpacing: 0.2,
+                                      ),
                                     ),
                                   ),
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 20, color: Color(0xFF2F80ED)),
+                                    tooltip: 'Uredi profil',
+                                    onPressed: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/edit-profile',
+                                        arguments: profile,
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                profile.email,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 0.1,
+                                  height: 1.2,
                                 ),
-                              ],
-                            ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Tooltip(
+                                message: profile.status == 'active' ? 'Članarina aktivna' : '',
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: profile.status == 'active'
+                                        ? const Color(0xFFDEF9EC)
+                                        : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 7,
+                                        height: 7,
+                                        decoration: BoxDecoration(
+                                          color: profile.status == 'active'
+                                              ? const Color(0xFF047857)
+                                              : Colors.grey[400],
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        _getStatusLabel(profile.status),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: profile.status == 'active'
+                                              ? const Color(0xFF047857)
+                                              : Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Edit Profile Button
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[600]!, Colors.blue[800]!],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.edit_outlined, size: 20),
-                      label: const Text(
-                        'Uredi Profil',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        shadowColor: Colors.transparent,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/edit-profile',
-                          arguments: profile,
-                        );
-                      },
-                    ),
-                  ),
+                  // No large CTA for edit profile (handled by icon in card)
 
                   const SizedBox(height: 24),
 
-                  // Membership section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Članarina', style: Theme.of(context).textTheme.titleLarge),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.green[50],
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.green[200]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.verified, size: 16, color: Colors.green[700]),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Aktivna',
-                              style: TextStyle(
-                                color: Colors.green[700],
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                  // Split View: Članarina i Ormarić - pola pola
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                      // Left side: Članarina
+                      Expanded(
+                        child: Builder(
+                          builder: (context) {
+                            final now = DateTime.now();
+                            final validUntil = profile.membershipValidUntil;
+                            final totalDuration = validUntil.difference(now);
+                            final daysRemaining = totalDuration.inDays;
+                            final isExpired = daysRemaining < 0;
+                            final estimatedPeriod = daysRemaining > 180
+                                ? 365
+                                : daysRemaining > 60
+                                    ? 90
+                                    : 30;
+                            final progress = isExpired
+                                ? 1.0
+                                : (1.0 - (daysRemaining / estimatedPeriod)).clamp(0.0, 1.0);
+                            String formattedDate = '${validUntil.day.toString().padLeft(2, '0')}. '
+                                '${_monthShortName(validUntil.month)} ${validUntil.year}';
+                            String expiresText = isExpired
+                                ? 'Istekla'
+                                : daysRemaining == 0
+                                    ? 'Ističe danas'
+                                    : 'Ističe za $daysRemaining ${daysRemaining == 1 ? 'dan' : 'dana'}';
+                            return Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              decoration: BoxDecoration(
+                                color: isExpired ? Colors.red[600] : const Color(0xFF0B5ED7),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isExpired ? Colors.red : const Color(0xFF0B5ED7)).withOpacity(0.13),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.18),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          isExpired ? Icons.warning_amber_rounded : Icons.card_membership_outlined,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          'Članarina',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.95),
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    formattedDate,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      expiresText,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Row(
+                                    children: [
+                                      const Text(
+                                        'Preostalo',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: LinearProgressIndicator(
+                                            value: isExpired ? 1.0 : progress,
+                                            backgroundColor: Colors.white.withOpacity(0.22),
+                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                              isExpired ? Colors.red[900]! : Colors.white,
+                                            ),
+                                            minHeight: 6,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      
+                      // Right side: Ormarić
+                      Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          decoration: BoxDecoration(
+                            color: profile.assignedLockerId != null
+                                ? const Color(0xFF4CC9F0)
+                                : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (profile.assignedLockerId != null ? const Color(0xFF4CC9F0) : Colors.grey)
+                                    .withOpacity(0.13),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: profile.assignedLockerId != null
+                                          ? Colors.white.withOpacity(0.18)
+                                          : Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      profile.assignedLockerId != null
+                                          ? Icons.lock_open_outlined
+                                          : Icons.lock_outline,
+                                      color: profile.assignedLockerId != null
+                                          ? Colors.white
+                                          : Colors.grey[500],
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Moj Ormar',
+                                      style: TextStyle(
+                                        color: profile.assignedLockerId != null
+                                            ? Colors.white.withOpacity(0.95)
+                                            : const Color(0xFF64748B),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                              Text(
+                                'Dodjeljeni Ormar',
+                                style: TextStyle(
+                                  color: profile.assignedLockerId != null
+                                      ? Colors.white.withOpacity(0.8)
+                                      : const Color(0xFF64748B),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                profile.assignedLockerId != null &&
+                                        profile.assignedLockerSector != null &&
+                                        profile.assignedLockerNumber != null
+                                    ? 'Sektor ${profile.assignedLockerSector} - ${profile.assignedLockerNumber}'
+                                    : 'Nije dodijeljen',
+                                style: TextStyle(
+                                  color: profile.assignedLockerId != null
+                                      ? Colors.white
+                                      : const Color(0xFF0F172A),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: _isOpeningLocker
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.lock_open_outlined,
+                                          size: 22,
+                                          color: profile.assignedLockerId != null
+                                              ? Colors.white
+                                              : Colors.grey[500],
+                                        ),
+                                  label: Text(
+                                    _isOpeningLocker ? 'Otvaranje...' : 'Otvori',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: profile.assignedLockerId != null
+                                          ? Colors.white
+                                          : Colors.grey[500],
+                                    ),
+                                  ),
+                                  onPressed: profile.assignedLockerId == null || _isOpeningLocker
+                                      ? null
+                                      : () => _handleOpenLocker(profile),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: profile.assignedLockerId != null
+                                        ? Colors.orange[600]
+                                        : Colors.grey[300],
+                                    foregroundColor: profile.assignedLockerId != null
+                                        ? Colors.white
+                                        : Colors.grey[500],
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(vertical: 18),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
+                    ),
                   ),
-                  const SizedBox(height: 16),
 
-                  // Membership card
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue[600]!, Colors.blue[800]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Važeća do',
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${profile.membershipValidUntil.difference(DateTime.now()).inDays} dana',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${profile.membershipValidUntil.day}. ${profile.membershipValidUntil.month}. ${profile.membershipValidUntil.year}.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        LinearProgressIndicator(
-                          value: 0.75,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Removed info box for 'Zahtjev za otvaranje ormarica je poslan.' (toast is enough)
 
                   const SizedBox(height: 32),
 
@@ -675,7 +875,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Notifications list
+                  // Notifications list - Enhanced
                   StreamBuilder<List<NotificationItem>>(
                     stream: _authService.notificationsStream(profile.id),
                     builder: (context, notifSnapshot) {
@@ -687,37 +887,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }
 
                       final notifs = (notifSnapshot.data ?? []).toList();
-
-                      // (Opcionalno) sort po timestamp ako stream ne garantuje redoslijed
-                      notifs.sort((a, b) {
-                        final at = a.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
-                        final bt = b.timestamp ?? DateTime.fromMillisecondsSinceEpoch(0);
-                        return bt.compareTo(at);
-                      });
-
-                      // SnackBar samo jednom za najnoviji success
-                      NotificationItem? latestSuccess;
-                      try {
-                        latestSuccess = notifs.firstWhere(
-                          (n) => n.type == 'success',
-                        );
-                      } catch (e) {
-                        latestSuccess = null;
-                      }
-                      if (latestSuccess != null) {
-                        final id = (latestSuccess.id ?? '${latestSuccess.timestamp}');
-                        if (_lastSuccessNotifId != id) {
-                          _lastSuccessNotifId = id;
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(latestSuccess!.message)),
-                              );
-                            }
-                          });
-                        }
-                      }
-
                       final visibleNotifs = _showAllNotifications ? notifs : notifs.take(3).toList();
 
                       return Container(
@@ -727,27 +896,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
+                          border: Border.all(
+                            color: Colors.grey.shade200.withOpacity(0.7),
+                            width: 1,
+                          ),
                         ),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                         child: visibleNotifs.isNotEmpty
                             ? Column(
                                 children: [
                                   for (final notif in visibleNotifs)
                                     Container(
-                                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
                                       decoration: BoxDecoration(
+                                        color: notif.type == 'fail'
+                                            ? Colors.red[50]
+                                            : Colors.green[50],
                                         border: Border.all(
-                                          color: notif.type == 'fail' ? Colors.red : Colors.green,
-                                          width: 2,
+                                          color: notif.type == 'fail'
+                                              ? Colors.red[200]!
+                                              : Colors.green[200]!,
+                                          width: 1.5,
                                         ),
                                         borderRadius: BorderRadius.circular(12),
-                                        color: notif.type == 'fail' ? Colors.red[50] : Colors.green[50],
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: (notif.type == 'fail' ? Colors.red : Colors.green)
+                                                .withOpacity(0.08),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
                                       ),
+                                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                                       child: ListTile(
+                                        contentPadding: EdgeInsets.zero,
                                         leading: Icon(
                                           notif.type == 'success' ? Icons.check_circle : Icons.error,
                                           color: notif.type == 'success' ? Colors.green : Colors.red,
@@ -791,123 +979,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     },
                   ),
-
-                  const SizedBox(height: 32),
-
-                  // Locker section
-                  Text('Moj Ormar', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 16),
-
-                  // Assigned locker card (FIXED)
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: profile.assignedLockerId != null
-                            ? [Colors.green[600]!, Colors.green[800]!]
-                            : [Colors.grey[500]!, Colors.grey[700]!],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
-                      children: [
-                        Icon(
-                          profile.assignedLockerId != null ? Icons.lock_open : Icons.lock_outline,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Dodjeljeni Ormar',
-                                style: TextStyle(color: Colors.white70, fontSize: 14),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                profile.assignedLockerId != null &&
-                                        profile.assignedLockerSector != null &&
-                                        profile.assignedLockerNumber != null
-                                    ? 'Sektor ${profile.assignedLockerSector} - ${profile.assignedLockerNumber}'
-                                    : 'Nije dodijeljen',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.lock_open),
-                          label: _isOpeningLocker
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text('Otvori ormarić'),
-                          onPressed: _isOpeningLocker ? null : () => _handleOpenLocker(profile),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[700],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.report_problem),
-                          label: const Text('Prijavi problem'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red[700],
-                            side: BorderSide(color: Colors.red[300]!),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () => _showReportProblemDialog(profile),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  if (_lockerOpenMessage != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      _lockerOpenMessage!,
-                      style: TextStyle(
-                        color: _lockerOpenMessage!.startsWith('Greška')
-                            ? Colors.red[700]
-                            : Colors.green[700],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
 
                   const SizedBox(height: 32),
 
@@ -955,6 +1026,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 48),
 
                   PrimaryButton(
+                    label: 'Prijavi grešku',
+                    onPressed: () async {
+                      final profile = snapshot.data!;
+                      await _showReportProblemDialog(profile);
+                    },
+                    backgroundColor: Colors.orange[600],
+                  ),
+                  const SizedBox(height: 16),
+                  PrimaryButton(
                     label: 'Odjavi se',
                     onPressed: _handleLogout,
                     backgroundColor: Colors.red[600],
@@ -968,3 +1048,4 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+

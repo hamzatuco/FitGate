@@ -138,7 +138,7 @@ class ShellScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   _buildNavItem(context: context, icon: Icons.history_rounded, label: 'Nedavna aktivnost', route: '/activity-logs'),
                   const SizedBox(height: 6),
-                  _buildNavItem(context: context, icon: Icons.settings_rounded, label: 'Podešavanja', route: '/admin-settings'),
+                  // ...removed Podešavanja nav item...
                   const Spacer(),
                   Material(
                     color: Colors.transparent,

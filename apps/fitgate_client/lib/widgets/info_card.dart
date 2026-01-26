@@ -21,16 +21,21 @@ class InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final actualIconColor = iconColor ?? Colors.blue[700]!;
     
-    return Card(
-      elevation: 0,
-      color: backgroundColor ?? Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[200]!, width: 1),
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
+      padding: const EdgeInsets.all(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Icon background circle
@@ -73,7 +78,6 @@ class InfoCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

@@ -4,6 +4,17 @@ import 'package:fitgate_shared/fitgate_shared.dart';
 
 /// Firestore service for managing members, lockers, and activity logs
 class FirestoreService {
+    /// Get city document by ID
+    Future<Map<String, dynamic>?> getCityById(String cityId) async {
+      try {
+        final doc = await _firestore.collection('cities').doc(cityId).get();
+        if (!doc.exists) return null;
+        return doc.data();
+      } catch (e) {
+        debugPrint('Greška pri učitavanju grada: $e');
+        return null;
+      }
+    }
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // ============ MEMBERS ============

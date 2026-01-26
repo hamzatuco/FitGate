@@ -60,6 +60,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [

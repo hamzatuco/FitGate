@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
+import 'package:flutter/services.dart';
 import '../services/firestore_service.dart';
 
 /// Member details screen showing comprehensive member information
@@ -38,8 +40,23 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
 
       // Load additional member data from Firestore
       final memberData = await _firestoreService.getMemberData(_member.id);
-      if (memberData != null && mounted) {
-        setState(() => _additionalData = memberData);
+      if (memberData != null) {
+        // Fetch city name if cityId exists
+        if (memberData['cityId'] != null) {
+          try {
+            final cityDoc = await _firestoreService.getCityById(memberData['cityId']);
+            if (cityDoc != null) {
+              memberData['city'] = cityDoc['cityName'] ?? memberData['cityId'];
+            } else {
+              memberData['city'] = memberData['cityId'];
+            }
+          } catch (e) {
+            memberData['city'] = memberData['cityId'];
+          }
+        }
+        if (mounted) {
+          setState(() => _additionalData = memberData);
+        }
       }
     } catch (e) {
       debugPrint('Greška pri učitavanju podataka člana: $e');
@@ -355,9 +372,44 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
               'Telefon',
               _additionalData['phoneNumber'] ?? 'Nije dostupno',
             ),
-            _buildInfoRow(
-              'RFID Kartica',
-              _member.cardId,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'RFID Kartica',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        _member.cardId,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 18),
+                        tooltip: 'Kopiraj RFID',
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: _member.cardId));
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('RFID kopiran u clipboard')),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -391,11 +443,11 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
           children: [
             _buildInfoRow(
               'Važeća do',
-              _member.membershipValidUntil.toString().split(' ')[0],
+              _formatDate(_member.membershipValidUntil),
             ),
             _buildInfoRow(
               'Registrovan',
-              _member.registeredAt.toString().split(' ')[0],
+              _formatDate(_member.registeredAt),
             ),
             _buildDaysRemainingRow(),
           ],
@@ -637,18 +689,17 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
 
   String _formatDate(dynamic dateValue) {
     if (dateValue == null) return 'Nije dostupno';
-    
     try {
       DateTime date;
       if (dateValue is String) {
         date = DateTime.parse(dateValue);
       } else if (dateValue is DateTime) {
         date = dateValue;
+      } else if (dateValue is Timestamp) {
+        date = dateValue.toDate();
       } else {
         return 'Nije dostupno';
       }
-      
-      // Format as dd.MM.yyyy
       return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}';
     } catch (e) {
       return 'Nije dostupno';

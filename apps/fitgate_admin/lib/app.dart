@@ -5,7 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/member_edit_screen.dart';
 import 'screens/member_details_screen.dart';
 import 'screens/shell_screen.dart';
-import 'screens/admin_settings_screen.dart';
+// ...existing code...
 
 /// Main app widget with routing configuration
 class FitGateAdminApp extends StatelessWidget {
@@ -115,7 +115,7 @@ class FitGateAdminApp extends StatelessWidget {
         '/members': (context) => const ShellScreen(currentRoute: '/members'),
         '/lockers': (context) => const ShellScreen(currentRoute: '/lockers'),
         '/activity-logs': (context) => const ShellScreen(currentRoute: '/activity-logs'),
-        '/admin-settings': (context) => const AdminSettingsScreen(),
+        // ...removed admin-settings route...
         '/member/details': (context) {
           final member = ModalRoute.of(context)?.settings.arguments as Member?;
           return MemberDetailsScreen(member: member ?? Member(
