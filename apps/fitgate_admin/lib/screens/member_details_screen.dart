@@ -42,7 +42,7 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
         setState(() => _additionalData = memberData);
       }
     } catch (e) {
-      print('Greška pri učitavanju podataka člana: $e');
+      debugPrint('Greška pri učitavanju podataka člana: $e');
     }
   }
 

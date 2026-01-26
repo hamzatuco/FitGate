@@ -15,6 +15,45 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+    bool _isClearingNotifications = false;
+
+    Future<void> _clearNotifications(String memberId) async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Potvrda brisanja'),
+          content: const Text('Da li ste sigurni da želite obrisati sve notifikacije? Ova radnja je nepovratna.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Otkaži'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Obriši', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+      setState(() => _isClearingNotifications = true);
+      try {
+        await _authService.clearAllNotifications(memberId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Sve notifikacije su obrisane.')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Greška pri brisanju notifikacija: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isClearingNotifications = false);
+      }
+    }
   bool _showAllNotifications = false;
 
   final _authService = AuthService();
@@ -40,8 +79,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _profileStream = _authService.getCurrentUserProfileStream();
-    // ignore: avoid_print
-    print('🚀 DashboardScreen initState - Stream kreiran');
   }
 
   Future<void> _handleLogout() async {
@@ -271,19 +308,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return StreamBuilder<MemberProfile?>(
       stream: _profileStream,
       builder: (context, snapshot) {
-        // ignore: avoid_print
-        print('\n📊 StreamBuilder state:');
-        // ignore: avoid_print
-        print('   - connectionState: ${snapshot.connectionState}');
-        // ignore: avoid_print
-        print('   - hasData: ${snapshot.hasData}');
-        // ignore: avoid_print
-        print('   - hasError: ${snapshot.hasError}');
-        if (snapshot.hasError) {
-          // ignore: avoid_print
-          print('   - ERROR: ${snapshot.error}');
-        }
-
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
             appBar: AppBar(title: const Text('Moj Profil')),
@@ -325,11 +349,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           appBar: AppBar(
             title: const Text('Moj Profil'),
             elevation: 0,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.blue.shade700, Colors.blue.shade900],
+                ),
+              ),
+            ),
           ),
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.blue.shade50.withOpacity(0.4),
+                  const Color(0xFFf8fafc),
+                  Colors.white,
+                ],
+                stops: const [0.0, 0.35, 1.0],
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Member profile card
@@ -567,31 +613,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 32),
 
                   // Notifications section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Obavještenja', style: Theme.of(context).textTheme.titleLarge),
-                      if (profile.notificationCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red[100],
-                            borderRadius: BorderRadius.circular(12),
+                  // Responsive notifications row
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isNarrow = constraints.maxWidth < 420;
+                      return Flex(
+                        direction: isNarrow ? Axis.vertical : Axis.horizontal,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: isNarrow ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('Obavještenja', style: Theme.of(context).textTheme.titleLarge),
+                              if (profile.notificationCount > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${profile.notificationCount} nova',
+                                    style: TextStyle(
+                                      color: Colors.red[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          child: Text(
-                            '${profile.notificationCount} nova',
-                            style: TextStyle(
-                              color: Colors.red[700],
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
+                          const SizedBox(height: 4, width: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: () => setState(() => _showAllNotifications = !_showAllNotifications),
+                                child: Text(_showAllNotifications ? 'Prikaži manje' : 'Prikaži više'),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: _isClearingNotifications ? null : () => _clearNotifications(profile.id),
+                                child: _isClearingNotifications
+                                    ? const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text('Očisti notifikacije'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.red[700],
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      TextButton(
-                        onPressed: () => setState(() => _showAllNotifications = !_showAllNotifications),
-                        child: Text(_showAllNotifications ? 'Show less' : 'View more'),
-                      ),
-                    ],
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
 
@@ -686,7 +766,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         subtitle: Text(notif.message),
                                         trailing: notif.timestamp != null
                                             ? Text(
-                                                '${notif.timestamp!.day}.${notif.timestamp!.month}.${notif.timestamp!.year}',
+                                                '${notif.timestamp!.day.toString().padLeft(2, '0')}.${notif.timestamp!.month.toString().padLeft(2, '0')}.${notif.timestamp!.year} '
+                                                '${notif.timestamp!.hour.toString().padLeft(2, '0')}:${notif.timestamp!.minute.toString().padLeft(2, '0')}',
                                                 style: const TextStyle(fontSize: 12),
                                               )
                                             : null,
@@ -786,7 +867,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   height: 18,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Text('Otvori ormaric'),
+                              : const Text('Otvori ormarić'),
                           onPressed: _isOpeningLocker ? null : () => _handleOpenLocker(profile),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green[700],
@@ -882,7 +963,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ),
-        );
+        ));
       },
     );
   }

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// REST API service for NodeMCU locker hardware
 /// Provides endpoints for RFID verification and locker control
@@ -197,7 +198,7 @@ class LockerAPIService {
         'nodeId': null, // Can be set by NodeMCU
       });
     } catch (e) {
-      print('Greška pri kreiranju sesije: $e');
+      debugPrint('Greška pri kreiranju sesije: $e');
     }
   }
 
@@ -216,7 +217,7 @@ class LockerAPIService {
         'reason': reason,
       });
     } catch (e) {
-      print('Greška pri logiranju pokušaja: $e');
+      debugPrint('Greška pri logiranju pokušaja: $e');
     }
   }
 
@@ -244,7 +245,7 @@ class LockerAPIService {
         });
       }
     } catch (e) {
-      print('Greška pri zatvaranju sesije: $e');
+      debugPrint('Greška pri zatvaranju sesije: $e');
     }
   }
 

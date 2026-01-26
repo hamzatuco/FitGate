@@ -6,7 +6,7 @@ final String apiUrl = 'https://europe-west1-fitgate-iot.cloudfunctions.net';
 
   Future<void> openLocker({required String lockerId, required String memberId}) async {
     final response = await http.post(
-Uri.parse('$apiUrl/openLocker')    ,
+      Uri.parse('$apiUrl/openLocker'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'lockerId': lockerId,

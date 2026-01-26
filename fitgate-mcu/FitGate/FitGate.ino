@@ -149,11 +149,14 @@ void pollLockerOpenRequests() {
         Serial.print(", status="); Serial.println(status);
         if (lockerId == LOCKER_ID && status == "pending") {
           Serial.println("[API] Zahtjev za otvaranje ormarica iz aplikacije!");
-          grantAccess();
-          // PATCH status na 'completed'
           String docName = d["name"].as<String>();
-          markLockerRequestCompleted(docName);
-          break; // Samo jedan zahtjev po pollu
+          int lastSlash = docName.lastIndexOf('/');
+          String requestId = lastSlash >= 0 ? docName.substring(lastSlash + 1) : "";
+          grantAccess();
+          if (requestId.length() > 0) {
+            markLockerRequestCompleted(requestId);
+          }
+          break;
         }
       }
     }
@@ -161,15 +164,16 @@ void pollLockerOpenRequests() {
   http.end();
 }
 
-void markLockerRequestCompleted(String docName) {
+// Označi zahtjev dovršenim preko Cloud Function (Firestore PATCH bez auth ne radi s MCU)
+void markLockerRequestCompleted(String requestId) {
   HTTPClient http;
-  String url = "https://firestore.googleapis.com/v1/" + docName;
+  String url = "https://europe-west1-fitgate-iot.cloudfunctions.net/completeLockerRequest";
   http.begin(client, url);
   http.addHeader("Content-Type", "application/json");
-  String payload = "{\"fields\":{\"status\":{\"stringValue\":\"completed\"}}}";
-  int httpCode = http.PATCH(payload);
+  String payload = "{\"requestId\":\"" + requestId + "\"}";
+  int httpCode = http.POST(payload);
   if (httpCode == 200) {
-    Serial.println("[API] Locker request marked as completed.");
+    Serial.println("[API] Locker request marked as completed -> notifikacija ce stici clanu.");
   } else {
     Serial.print("[API] Failed to mark request completed: ");
     Serial.println(httpCode);

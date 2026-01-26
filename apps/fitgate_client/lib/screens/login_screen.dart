@@ -56,12 +56,36 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: Center(
-        child: SizedBox(
-          width: 400,
-          child: Padding(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.shade50,
+              const Color(0xFFf8fafc),
+              Colors.blue.shade50.withOpacity(0.6),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Container(
+            width: 400,
+            constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 24, offset: const Offset(0, 8)),
+                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
             child: SingleChildScrollView(
               child: Form(
                 key: _formKey,
@@ -70,31 +94,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo and brand
-                    Icon(
-                      Icons.fitness_center,
-                      size: 64,
-                      color: Colors.blue[700],
+                    Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(Icons.fitness_center_rounded, size: 48, color: Colors.blue[700]),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     Text(
                       'FitGate',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey[900],
+                        letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
-                      'Član Teretane',
+                      'Član teretane',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 40),
 
                     // Email field
                     AppTextField(
@@ -205,6 +232,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

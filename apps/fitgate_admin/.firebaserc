@@ -1,15 +1,13 @@
 {
-  "projects": {
-    "default": "fitgate-iot"
-  },
+  "projects": {},
   "targets": {
     "fitgate-iot": {
       "hosting": {
         "fitgate-client": [
-          "fitgate-iot"
+          "fitgate-client"
         ],
         "fitgate-admin": [
-          "fitgate-iot-admin"
+          "fitgate-admin"
         ]
       }
     }

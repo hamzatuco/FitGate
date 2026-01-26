@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
 
 /// Firestore service for managing members, lockers, and activity logs
@@ -182,6 +183,25 @@ class FirestoreService {
     } catch (e) {
       throw Exception('Greška pri učitavanju ormara: $e');
     }
+  }
+
+  /// Real-time stream ormara – bez manualnog Osvježi
+  Stream<List<Locker>> getLockersStream() {
+    return _firestore
+        .collection('lockers')
+        .orderBy('number')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return Locker(
+                id: doc.id,
+                number: data['number'] ?? '',
+                sector: data['sector'] ?? '',
+                status: data['status'] ?? 'free',
+                assignedTo: data['currentMember'],
+                lastAccessTime: (data['lastAccessTime'] as Timestamp?)?.toDate(),
+              );
+            }).toList());
   }
 
   /// Get single locker by ID
@@ -577,6 +597,30 @@ class FirestoreService {
     }
   }
 
+  /// Real-time stream nedavnih aktivnosti
+  Stream<List<Map<String, dynamic>>> getActivityLogsStream({int limit = 10}) {
+    return _firestore
+        .collection('activityLogs')
+        .orderBy('timestamp', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return {
+                'id': doc.id,
+                'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+                'action': data['action'] ?? '',
+                'memberName': data['memberName'] ?? '',
+                'lockerId': data['lockerId'],
+                'lockerSector': data['lockerSector'],
+                'lockerNumber': data['lockerNumber'],
+                'staffName': data['staffName'] ?? '',
+                'description': data['description'] ?? '',
+                'success': data['success'] ?? true,
+              };
+            }).toList());
+  }
+
   /// Log an activity (public method for external use)
   Future<void> logActivity({
     required String action,
@@ -697,6 +741,37 @@ class FirestoreService {
     }
   }
 
+  /// Stream statistike – osvježava se kad se lockers ili members promijene
+  Stream<Map<String, dynamic>> getDashboardStatsStream() {
+    return _firestore.collection('lockers').snapshots().asyncMap((lockerSnap) async {
+      final memberSnap = await _firestore
+          .collection('members')
+          .where('status', isEqualTo: 'active')
+          .get();
+      int validMembers = 0;
+      for (var doc in memberSnap.docs) {
+        final data = doc.data();
+        final validUntil = (data['membershipValidUntil'] as Timestamp?)?.toDate();
+        if (validUntil != null && validUntil.isAfter(DateTime.now())) validMembers++;
+      }
+      int freeLockers = 0, occupiedLockers = 0, outOfServiceLockers = 0;
+      for (var doc in lockerSnap.docs) {
+        final status = doc.data()['status'] ?? 'free';
+        if (status == 'free') freeLockers++;
+        else if (status == 'occupied') occupiedLockers++;
+        else if (status == 'out_of_service') outOfServiceLockers++;
+      }
+      return {
+        'activeMembersCount': validMembers,
+        'activeSessionsCount': occupiedLockers,
+        'freeLockers': freeLockers,
+        'occupiedLockers': occupiedLockers,
+        'outOfServiceLockers': outOfServiceLockers,
+        'totalLockers': lockerSnap.docs.length,
+      };
+    });
+  }
+
   // ============ LOCKER ACCESS VERIFICATION ============
 
   /// Verify if RFID card is authorized for locker access
@@ -787,7 +862,7 @@ class FirestoreService {
       });
     } catch (e) {
       // Log error but don't throw - access should still be granted
-      print('Greška pri kreiranju locker sesije: $e');
+      debugPrint('Greška pri kreiranju locker sesije: $e');
     }
   }
 
@@ -813,7 +888,7 @@ class FirestoreService {
         });
       }
     } catch (e) {
-      print('Greška pri zatvaranju sesije: $e');
+      debugPrint('Greška pri zatvaranju sesije: $e');
     }
   }
 
@@ -832,7 +907,7 @@ class FirestoreService {
         'reason': reason,
       });
     } catch (e) {
-      print('Greška pri logiranju neuspješnog pokušaja: $e');
+      debugPrint('Greška pri logiranju neuspješnog pokušaja: $e');
     }
   }
 

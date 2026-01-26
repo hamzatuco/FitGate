@@ -15,54 +15,20 @@ class LockersScreen extends StatefulWidget {
 }
 
 class _LockersScreenState extends State<LockersScreen> {
-  bool _isLoading = true;
-  List<Locker> _lockers = [];
   String _selectedSector = 'All';
   String _selectedStatus = 'All';
   final List<String> _sectors = ['All', 'A', 'B', 'C', 'D'];
   final List<String> _statuses = ['All', 'free', 'occupied', 'out_of_service'];
   final FirestoreService _firestoreService = FirestoreService();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadLockers();
-  }
-
-  Future<void> _loadLockers() async {
-    setState(() => _isLoading = true);
-    try {
-      final lockers = await _firestoreService.getLockers();
-      
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _lockers = lockers;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška pri učitavanju ormara: $e')),
-        );
-      }
-    }
-  }
-
-  List<Locker> get _filteredLockers {
-    var filtered = _lockers;
-    
-    // Filter by sector
+  List<Locker> _filterLockers(List<Locker> lockers) {
+    var filtered = lockers;
     if (_selectedSector != 'All') {
       filtered = filtered.where((l) => l.sector == _selectedSector).toList();
     }
-    
-    // Filter by status
     if (_selectedStatus != 'All') {
       filtered = filtered.where((l) => l.status == _selectedStatus).toList();
     }
-    
     return filtered;
   }
   
@@ -109,7 +75,6 @@ class _LockersScreenState extends State<LockersScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Ormar je uspješno oslobođen')),
           );
-          _loadLockers();
         }
       } catch (e) {
         // Log failed activity
@@ -148,10 +113,8 @@ class _LockersScreenState extends State<LockersScreen> {
         await _firestoreService.markLockerOutOfService(locker.id, 'staff-1', 'Maintenance needed', null);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Ormar je označen kao neispravno')),
+            const SnackBar(content: Text('Ormar je označen kao neispravno')),
           );
-          _loadLockers();
         }
       } catch (e) {
         if (mounted) {
@@ -226,7 +189,6 @@ class _LockersScreenState extends State<LockersScreen> {
             duration: const Duration(seconds: 3),
           ),
         );
-        _loadLockers();
       }
     } catch (e) {
       if (mounted) {
@@ -324,7 +286,6 @@ class _LockersScreenState extends State<LockersScreen> {
             duration: const Duration(seconds: 3),
           ),
         );
-        _loadLockers();
       }
     } catch (e) {
       if (mounted) {
@@ -341,143 +302,154 @@ class _LockersScreenState extends State<LockersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? LoadingView(message: 'Učitavanje ormara...')
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Ormari',
-                            style: Theme.of(context).textTheme.headlineSmall,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Status ormara u realnom vremenu i upravljanje',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: _assignLockerToMember,
-                            icon: const Icon(Icons.nfc),
-                            label: const Text('Pridruži Ormar'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[600],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: _loadLockers,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Osvježi'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Sector filter
-                  Row(
-                    children: [
-                      const Text('Sektor:', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 12),
-                      ..._sectors.map(
-                        (sector) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(sector),
-                            selected: _selectedSector == sector,
-                            onSelected: (selected) {
-                              setState(() => _selectedSector = sector);
-                            },
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFf8fafc),
+            const Color(0xFFf1f5f9),
+            Colors.white.withOpacity(0.95),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ),
+      ),
+      child: StreamBuilder<List<Locker>>(
+        stream: _firestoreService.getLockersStream(),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+            return LoadingView(message: 'Učitavanje ormara...');
+          }
+          final lockers = snap.data ?? [];
+          final filtered = _filterLockers(lockers);
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Ormari',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: const Color(0xFF0f172a),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.green, blurRadius: 4)],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Status u realnom vremenu',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _assignLockerToMember,
+                      icon: const Icon(Icons.add_circle_outline, size: 20),
+                      label: const Text('Pridruži ormar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Status filter
-                  Row(
-                    children: [
-                      const Text('Status:', style: TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 12),
-                      ..._statuses.map(
-                        (status) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(_getStatusLabel(status)),
-                            selected: _selectedStatus == status,
-                            onSelected: (selected) {
-                              setState(() => _selectedStatus = status);
-                            },
-                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    const Text('Sektor:', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    ..._sectors.map(
+                      (sector) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(sector),
+                          selected: _selectedSector == sector,
+                          onSelected: (_) => setState(() => _selectedSector = sector),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Locker grid
-                  Expanded(
-                    child: _filteredLockers.isEmpty
-                        ? EmptyView(
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Text('Status:', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(width: 12),
+                    ..._statuses.map(
+                      (status) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
+                          label: Text(_getStatusLabel(status)),
+                          selected: _selectedStatus == status,
+                          onSelected: (_) => setState(() => _selectedStatus = status),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: filtered.isEmpty
+                      ? EmptyView(
                           title: 'Nema ormara',
-                          subtitle:
-                            'Nema ormara koji odgovaraju filtrima',
-                            icon: Icons.storage,
-                          )
-                        : GridView.builder(
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 8,
-                              mainAxisSpacing: 12,
-                              crossAxisSpacing: 12,
-                              childAspectRatio: 0.85,
-                            ),
-                            itemCount: _filteredLockers.length,
-                            itemBuilder: (context, index) {
-                              final locker = _filteredLockers[index];
-                              return LockerTile(
-                                lockerNumber: locker.number,
-                                sector: locker.sector,
-                                status: locker.status,
-                                assignedMember: locker.currentMember,
-                                onForceRelease: locker.status == 'occupied'
-                                    ? () =>
-                                        _forceReleaseLocker(locker)
-                                    : null,
-                                onMarkOutOfService: locker.status != 'out_of_service'
-                                    ? () =>
-                                        _markOutOfService(locker)
-                                    : null,
-                                onAssignMember: locker.status == 'free'
-                                    ? () =>
-                                        _assignSpecificLockerToMember(locker)
-                                    : null,
-                              );
-                            },
+                          subtitle: 'Nema ormara koji odgovaraju filtrima',
+                          icon: Icons.lock_rounded,
+                        )
+                      : GridView.builder(
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 8,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: 0.85,
                           ),
-                  ),
-                ],
-              ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final locker = filtered[index];
+                            return LockerTile(
+                              lockerNumber: locker.number,
+                              sector: locker.sector,
+                              status: locker.status,
+                              assignedMember: locker.assignedTo,
+                              onForceRelease: locker.status == 'occupied'
+                                  ? () => _forceReleaseLocker(locker)
+                                  : null,
+                              onMarkOutOfService: locker.status != 'out_of_service'
+                                  ? () => _markOutOfService(locker)
+                                  : null,
+                              onAssignMember: locker.status == 'free'
+                                  ? () => _assignSpecificLockerToMember(locker)
+                                  : null,
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
+          );
+        },
+      ),
     );
   }
 }

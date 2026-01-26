@@ -4,7 +4,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/empty_view.dart';
 
-/// Dashboard screen with overview statistics
+/// Dashboard s real-time streamovima – bez potrebe za manualnim Osvježi
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -13,156 +13,178 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _activityLogs = [];
-  Map<String, dynamic> _stats = {
-    'activeMembersCount': 0,
-    'activeSessionsCount': 0,
-    'freeLockers': 0,
-    'occupiedLockers': 0,
-  };
   final FirestoreService _firestoreService = FirestoreService();
-  @override
-  void initState() {
-    super.initState();
-    _loadDashboard();
-  }
 
   String _getActionLabel(String? action) {
     switch (action) {
       case 'assign_locker':
-        return 'Ormaric dodijeljen';
+        return 'Ormarić dodijeljen';
       case 'force_release':
-        return 'Ormaric skinut od strane admina';
+        return 'Ormarić skinut od strane admina';
       case 'problem_reported':
         return 'Prijavljen problem';
       case 'mark_out_of_service':
-        return 'Ormaric izvan funkcije';
+        return 'Ormarić izvan funkcije';
       case 'suspend_member':
-        return 'Clanstvo suspendovano';
+        return 'Članstvo suspendovano';
       default:
         return action ?? '';
     }
   }
 
-  Future<void> _loadDashboard() async {
-    setState(() => _isLoading = true);
-    try {
-      final stats = await _firestoreService.getDashboardStats();
-      final logs = await _firestoreService.getActivityLogs(limit: 10);
-      
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _stats = stats;
-          _activityLogs = logs;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greska pri ucitavanju: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? LoadingView(message: 'Učitavanje kontrolne ploče...')
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Kontrolna Ploča',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Pregled rada teretane u realnom vremenu',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFf8fafc),
+            const Color(0xFFf1f5f9),
+            Colors.white.withOpacity(0.95),
+          ],
+          stops: const [0.0, 0.4, 1.0],
+        ),
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kontrolna ploča',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: const Color(0xFF0f172a),
+                          fontWeight: FontWeight.w700,
                         ),
-                        ElevatedButton.icon(
-                          onPressed: _loadDashboard,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Osvježi'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Stat cards
-                    GridView.count(
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 20,
-                      crossAxisSpacing: 20,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        StatCard(
-                          title: 'Aktivni Članovi',
-                          value: '${_stats['activeMembersCount'] ?? 0}',
-                          icon: Icons.people,
-                          color: Colors.blue,
-                        ),
-                        StatCard(
-                          title: 'Aktivne Sesije',
-                          value: '${_stats['activeSessionsCount'] ?? 0}',
-                          icon: Icons.access_time,
-                          color: Colors.purple,
-                        ),
-                        StatCard(
-                          title: 'Slobodni Ormarići',
-                          value: '${_stats['freeLockers'] ?? 0}',
-                          icon: Icons.lock_open,
-                          color: Colors.green,
-                        ),
-                        StatCard(
-                          title: 'Zauzeti Ormarići',
-                          value: '${_stats['occupiedLockers'] ?? 0}',
-                          icon: Icons.lock,
-                          color: Colors.orange,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Activity logs section
-                    Text(
-                      'Nedavna Aktivnost',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: Colors.grey[200]!, width: 1),
                       ),
-                      child: _activityLogs.isEmpty
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: Colors.green, blurRadius: 4),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Uživo',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+
+              StreamBuilder<Map<String, dynamic>>(
+                stream: _firestoreService.getDashboardStatsStream(),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+                    return LoadingView(message: 'Učitavanje...');
+                  }
+                  final stats = snap.data ?? {
+                    'activeMembersCount': 0,
+                    'activeSessionsCount': 0,
+                    'freeLockers': 0,
+                    'occupiedLockers': 0,
+                  };
+                  return GridView.count(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      StatCard(
+                        title: 'Aktivni članovi',
+                        value: '${stats['activeMembersCount'] ?? 0}',
+                        icon: Icons.people_rounded,
+                        color: Colors.blue,
+                      ),
+                      StatCard(
+                        title: 'Aktivne sesije',
+                        value: '${stats['activeSessionsCount'] ?? 0}',
+                        icon: Icons.access_time_rounded,
+                        color: Colors.purple,
+                      ),
+                      StatCard(
+                        title: 'Slobodni ormarići',
+                        value: '${stats['freeLockers'] ?? 0}',
+                        icon: Icons.lock_open_rounded,
+                        color: Colors.green,
+                      ),
+                      StatCard(
+                        title: 'Zauzeti ormarići',
+                        value: '${stats['occupiedLockers'] ?? 0}',
+                        icon: Icons.lock_rounded,
+                        color: Colors.orange,
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+
+              Text(
+                'Nedavna aktivnost',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: const Color(0xFF0f172a),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: _firestoreService.getActivityLogsStream(limit: 10),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting && !snap.hasData) {
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  }
+                  final logs = snap.data ?? [];
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: logs.isEmpty
                           ? EmptyView(
                               title: 'Nema aktivnosti',
-                              subtitle:
-                                  'Aktivnost ce biti prikazana kada clanovi koriste ormare',
-                              icon: Icons.history,
+                              subtitle: 'Aktivnost će se prikazati kada članovi koriste ormare',
+                              icon: Icons.history_rounded,
                             )
                           : SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
@@ -170,41 +192,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 columns: const [
                                   DataColumn(label: Text('Vrijeme')),
                                   DataColumn(label: Text('Akcija')),
-                                  DataColumn(label: Text('Clan')),
-                                  DataColumn(label: Text('Ormar')),
+                                  DataColumn(label: Text('Član')),
+                                  DataColumn(label: Text('Ormarić')),
                                 ],
-                                rows: _activityLogs
-                                    .map(
-                                      (log) {
-                                        final timestamp = log['timestamp'];
-                                        final timeStr = timestamp is DateTime
-                                            ? '${timestamp.day}.${timestamp.month}.${timestamp.year} ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}'
-                                            : (timestamp?.toString() ?? '-');
-                                        final isProblem = log['action'] == 'problem_reported';
-                                        final lockerValue = (log['lockerSector'] != null && log['lockerNumber'] != null)
-                                            ? '${log['lockerSector']}-${log['lockerNumber']}'
-                                            : (log['lockerId'] ?? '');
-                                        
-                                        return DataRow(
-                                          color: isProblem
-                                              ? WidgetStateProperty.all(Colors.red[200])
-                                              : null,
-                                          cells: [
-                                          DataCell(Text(timeStr)),
-                                          DataCell(Text(_getActionLabel(log['action'] as String?))),
-                                          DataCell(Text(log['memberName'] ?? '')),
-                                          DataCell(Text(lockerValue)),
-                                        ]);
-                                      },
-                                    )
-                                    .toList(),
+                                rows: logs.map((log) {
+                                  final timestamp = log['timestamp'];
+                                  final timeStr = timestamp is DateTime
+                                      ? '${timestamp.day}.${timestamp.month}.${timestamp.year} ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}'
+                                      : (timestamp?.toString() ?? '-');
+                                  final isProblem = log['action'] == 'problem_reported';
+                                  final lockerValue =
+                                      (log['lockerSector'] != null && log['lockerNumber'] != null)
+                                          ? '${log['lockerSector']}-${log['lockerNumber']}'
+                                          : (log['lockerId']?.toString() ?? '');
+                                  return DataRow(
+                                    color: isProblem
+                                        ? WidgetStateProperty.all(Colors.red.shade50)
+                                        : null,
+                                    cells: [
+                                      DataCell(Text(timeStr)),
+                                      DataCell(Text(_getActionLabel(log['action'] as String?))),
+                                      DataCell(Text(log['memberName']?.toString() ?? '')),
+                                      DataCell(Text(lockerValue)),
+                                    ],
+                                  );
+                                }).toList(),
                               ),
                             ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -140,16 +140,16 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Clanovi',
-                            style: Theme.of(context).textTheme.headlineSmall,
+                            'Članovi',
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              color: const Color(0xFF0f172a),
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Upravljanje clanovima i dodjelama RFID kartica',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                            'Upravljanje članovima i dodjelama RFID kartica',
+                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                           ),
                         ],
                       ),

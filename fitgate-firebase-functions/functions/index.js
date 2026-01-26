@@ -59,9 +59,10 @@ async function resolveAccessAttempt(attemptId, { status, reason = null, meta = {
 }
 
 /**
- * Trigger: kada accessAttempt pređe iz pending -> success/fail,
- * upiši JEDNU notifikaciju u members/{memberId}/notifications i označi notified=true.
- */exports.notifyAccessAttemptResolved = europeFunction.firestore
+ * Trigger: kada accessAttempt pređe u success/fail,
+ * upiše notifikaciju u members/{memberId}/notifications i označi notified=true.
+ */
+exports.notifyAccessAttemptResolved = europeFunction.firestore
   .document('accessAttempts/{attemptId}')
   .onWrite(async (change, context) => {
     const before = change.before.exists ? change.before.data() : null;
@@ -101,7 +102,8 @@ async function resolveAccessAttempt(attemptId, { status, reason = null, meta = {
         ? `Ormarić ${lockerLabel} je uspješno otvoren${viaApp}.`
         : `Pokušaj otvaranja ormarića ${lockerLabel} nije uspio${after.reason ? ` (${after.reason})` : ''}.`;
 
-    await db.collection('members').doc(after.memberId).collection('notifications').add({
+    const memberRef = db.collection('members').doc(after.memberId);
+    await memberRef.collection('notifications').add({
       message: msg,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       type: afterStatus === 'success' ? 'success' : 'fail',
@@ -109,6 +111,7 @@ async function resolveAccessAttempt(attemptId, { status, reason = null, meta = {
       attemptId: context.params.attemptId,
       action: after.action || null,
     });
+    await memberRef.update({ notificationCount: admin.firestore.FieldValue.increment(1) });
 
     await change.after.ref.update({ notified: true });
     return null;
@@ -141,7 +144,7 @@ exports.openLocker = europeFunction.https.onRequest((req, res) => {
       }
 
       // ✅ OVO MCU ČITA
-      await db.collection('lockerOpenRequests').add({
+      const requestRef = await db.collection('lockerOpenRequests').add({
         lockerId,
         memberId,
         requestedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -149,14 +152,47 @@ exports.openLocker = europeFunction.https.onRequest((req, res) => {
         source: 'app',
       });
 
-      // ❌ NE upisuj ovdje success/fail notifikacije
       return res.status(200).json({
         success: true,
         message: 'Zahtjev za otvaranje ormarica je poslan.',
+        requestId: requestRef.id,
       });
     } catch (error) {
       console.error('openLocker error:', error);
       return res.status(500).json({ success: false, message: 'Greška na serveru: ' + error.message });
+    }
+  });
+});
+
+/**
+ * MCU/IoT poziva ovaj endpoint nakon što fizički otvori ormar.
+ * Firestore REST PATCH s uređaja bez auth ne prolazi, zato MCU koristi ovu funkciju.
+ * Update dokumenta na 'completed' pokreće notifyLockerRequestCompleted → notifikacija članu.
+ */
+exports.completeLockerRequest = europeFunction.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') return res.status(200).send();
+    try {
+      const { requestId } = req.body || {};
+      if (!requestId) {
+        return res.status(400).json({ success: false, message: 'requestId je obavezan.' });
+      }
+      const ref = db.collection('lockerOpenRequests').doc(requestId);
+      const doc = await ref.get();
+      if (!doc.exists) {
+        return res.status(404).json({ success: false, message: 'Zahtjev nije pronađen.' });
+      }
+      if (doc.data().status === 'completed') {
+        return res.status(200).json({ success: true, message: 'Već označeno completed.' });
+      }
+      await ref.update({
+        status: 'completed',
+        completedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return res.status(200).json({ success: true, message: 'Zahtjev označen kao completed.' });
+    } catch (error) {
+      console.error('completeLockerRequest error:', error);
+      return res.status(500).json({ success: false, message: 'Greška: ' + error.message });
     }
   });
 });
@@ -187,13 +223,15 @@ exports.notifyLockerRequestCompleted = europeFunction.firestore
     const lockerDoc = await db.collection('lockers').doc(lockerId).get();
     const lockerNumber = lockerDoc.exists ? (lockerDoc.data().number || lockerId) : lockerId;
 
-    await db.collection('members').doc(memberId).collection('notifications').add({
+    const memberRef = db.collection('members').doc(memberId);
+    await memberRef.collection('notifications').add({
       message: `Ormarić ${lockerNumber} je uspješno otvoren putem aplikacije.`,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
       type: 'success',
       source: 'app',
       requestId: context.params.reqId,
     });
+    await memberRef.update({ notificationCount: admin.firestore.FieldValue.increment(1) });
 
     await change.after.ref.update({ notified: true });
     return null;

@@ -48,7 +48,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }).toList();
       });
     } catch (e) {
-      print('Greška pri učitavanju gradova: $e');
+      debugPrint('Greška pri učitavanju gradova: $e');
     }
   }
 
@@ -70,7 +70,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
       }
     } catch (e) {
-      print('Greška pri učitavanju podataka: $e');
+      debugPrint('Greška pri učitavanju podataka: $e');
     }
   }
 

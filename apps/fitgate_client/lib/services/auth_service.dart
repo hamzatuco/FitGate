@@ -5,13 +5,32 @@ import '../models/member_profile.dart';
 
 /// Authentication service with Firebase integration
 class AuthService {
-    /// Stream notifikacija iz podkolekcije
+      /// Delete all notifications for a member
+      Future<void> clearAllNotifications(String memberId) async {
+        if (memberId.isEmpty) return;
+        final batch = _firestore.batch();
+        final notifCollection = _firestore
+            .collection('members')
+            .doc(memberId)
+            .collection('notifications');
+        final notifs = await notifCollection.get();
+        for (final doc in notifs.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+        // Optionally reset notificationCount
+        await _firestore.collection('members').doc(memberId).update({'notificationCount': 0});
+      }
+    /// Real-time stream notifikacija za člana (members/{memberId}/notifications).
+    /// Koristi limit(50) za manje čitanja; index na (timestamp desc) poželjan.
     Stream<List<NotificationItem>> notificationsStream(String memberId) {
+      if (memberId.isEmpty) return Stream.value([]);
       return _firestore
           .collection('members')
           .doc(memberId)
           .collection('notifications')
           .orderBy('timestamp', descending: true)
+          .limit(50)
           .snapshots()
           .map((snapshot) => snapshot.docs
               .map((doc) => NotificationItem.fromFirestore(doc))
