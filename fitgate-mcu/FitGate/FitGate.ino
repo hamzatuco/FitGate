@@ -3,329 +3,349 @@
 #include <ArduinoJson.h>
 #include <SPI.h>
 #include <MFRC522.h>
+#include <Stepper.h>
 
-// WiFi kredencijali
+// ===================== CONFIG =====================
 const char* ssid = "iPhone";
 const char* password = "tulsaking";
-
-// Firebase Cloud Function URL (europe-west1)
-const char* firebaseUrl = "https://europe-west1-fitgate-iot.cloudfunctions.net/verifyLockerAccess";
-
-// ID ovog ormarića (iz Firestore document ID)
+const char* firebaseUrlVerify = "https://europe-west1-fitgate-iot.cloudfunctions.net/verifyLockerAccess";
+const char* firebaseUrlComplete = "https://europe-west1-fitgate-iot.cloudfunctions.net/completeLockerRequest";
+const char* firebaseUrlHealth = "https://europe-west1-fitgate-iot.cloudfunctions.net/healthCheck";
+const char* firestoreListUrl = "https://firestore.googleapis.com/v1/projects/fitgate-iot/databases/(default)/documents/lockerOpenRequests?pageSize=5&orderBy=requestedAt%20desc";
 const char* LOCKER_ID = "2FGYXSAkk3ip944zwzGs";
 
-// RFID pinovi (prema tvojoj shemi)
-#define RST_PIN 5   // GPIO5 (D1)
-#define SS_PIN 4    // GPIO4 (D2)
+// RC522: SS na D2, RST na 3V3
+#define RC522_SS_PIN   4      // D2 GPIO4
+#define RC522_RST_PIN  -1     // RST na 3V3
 
-// LED indikator
-#define STATUS_LED 16  // GPIO16 (D0)
+// LED + buzzer
+#define STATUS_LED_PIN 5   // D1
+#define BUZZER_PIN     5      // D1 GPIO5
 
-// Buzzer pin
-#define BUZZER_PIN 15  // GPIO15 (D8)
+// STEPPER (ULN2003) - BEZ TX, BEZ SPI konflikta
+// IN1 -> D3 (GPIO0)
+// IN2 -> D4 (GPIO2)
+// IN3 -> D8 (GPIO15)
+// IN4 -> RX (GPIO3)
+#define ST_IN1 0              // D3
+#define ST_IN2 2              // D4
+#define ST_IN3 15             // D8
+#define ST_IN4 3              // RX
 
-MFRC522 rfid(SS_PIN, RST_PIN);
+const int STEPS_PER_REV = 2048;
+const int MOTOR_RPM = 8;
+const int UNLOCK_STEPS = 512;
+
+const unsigned long POLL_INTERVAL_MS = 8000;
+const unsigned long WIFI_RETRY_MS = 8000;
+const unsigned long OPEN_HOLD_MS = 5000;
+const unsigned long HTTP_TIMEOUT_MS = 5000;
+const unsigned long RFID_RESET_INTERVAL_MS = 30000;
+
+MFRC522 rfid(RC522_SS_PIN, RC522_RST_PIN);
 WiFiClientSecure client;
+Stepper stepperMotor(STEPS_PER_REV, ST_IN1, ST_IN3, ST_IN2, ST_IN4);
 
-// --- GLOBAL VARS FOR POLLING ---
-unsigned long lastPollTime = 0;
-const unsigned long pollInterval = 5000; // 5 sekundi
+enum class LockerState : uint8_t { IDLE = 0, OPENING, HOLD_OPEN, CLOSING };
+LockerState lockerState = LockerState::IDLE;
 
-void setup() {
-  Serial.begin(9600);
-  
-  // LED pin setup
-  pinMode(STATUS_LED, OUTPUT);
-  digitalWrite(STATUS_LED, LOW);
-  
-  // Buzzer pin setup
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-  
-  // RFID setup
-  SPI.begin();
-  rfid.PCD_Init();
-  
-  // WiFi konekcija
-  Serial.println("Connecting to WiFi...");
-  Serial.print("SSID: ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 40) {
-    delay(500);
-    Serial.print(".");
-    attempts++;
+bool requestInProgress = false;
+String lastHandledRequestId = "";
+unsigned long stateStartedMs = 0, lastPollMs = 0, lastWiFiAttemptMs = 0, lastRfidResetMs = 0;
+
+// ===================== UTIL =====================
+String uidToHexUpper(const MFRC522::Uid &uid) {
+  String s;
+  s.reserve(uid.size * 2);
+  for (byte i = 0; i < uid.size; i++) {
+    if (uid.uidByte[i] < 0x10) s += "0";
+    s += String(uid.uidByte[i], HEX);
   }
-  
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("\n\n!!! WiFi CONNECTION FAILED !!!");
-    Serial.println("Check:");
-    Serial.println("1. iPhone hotspot is ON");
-    Serial.println("2. Password is correct");
-    Serial.println("3. iPhone is close to NodeMCU");
-    while(1) {
-      digitalWrite(STATUS_LED, HIGH);
-      delay(200);
-      digitalWrite(STATUS_LED, LOW);
-      delay(200);
-    }
-  }
-  
-  Serial.println("\nWiFi connected!");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
-  
-  // Zvučni signal - WiFi OK
-  tone(BUZZER_PIN, 1000, 200);
-  delay(250);
-  
-  // Disable SSL certificate verification (za Firebase)
-  client.setInsecure();
-  
-  // Test konekcija
-  testConnection();
-  
-  Serial.println("Ready to scan RFID cards...");
+  s.toUpperCase();
+  return s;
 }
 
+const bool LED_ACTIVE_LOW = true; // stavi false ako prevežeš LED da bude normalna (active-HIGH)
 
+void ledOn()  { digitalWrite(STATUS_LED_PIN, LED_ACTIVE_LOW ? LOW  : HIGH); }
+void ledOff() { digitalWrite(STATUS_LED_PIN, LED_ACTIVE_LOW ? HIGH : LOW ); }
 
-void loop() {
-  // ...existing code...
-  // delay(1000); // možeš vratiti ako želiš pauzu
-  // RFID logika (ostaje kao prije)
-  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-    String cardId = "";
-    for (byte i = 0; i < rfid.uid.size; i++) {
-      cardId += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
-      cardId += String(rfid.uid.uidByte[i], HEX);
-    }
-    cardId.toUpperCase();
-    tone(BUZZER_PIN, 1200, 80);
-    delay(90);
-    Serial.println("\n==============================");
-    Serial.print("[RFID] Kartica: ");
-    Serial.println(cardId);
-    Serial.println("------------------------------");
-    bool authorized = verifyAccess(cardId);
-    if (authorized) {
-      grantAccess();
-    } else {
-      denyAccess();
-    }
-    Serial.println("==============================\n");
-    rfid.PICC_HaltA();
-    rfid.PCD_StopCrypto1();
-    delay(2000);
-  }
-
-  // Pollaj lockerOpenRequests svakih 5 sekundi
-  unsigned long now = millis();
-  if (now - lastPollTime > pollInterval) {
-    lastPollTime = now;
-    pollLockerOpenRequests();
-  }
-}
-
-void pollLockerOpenRequests() {
-  if (WiFi.status() != WL_CONNECTED) return;
+// ===================== HTTP =====================
+int httpRequest(const char* url, const String& payload = "", bool isPost = false) {
+  if (WiFi.status() != WL_CONNECTED) return 0;
   HTTPClient http;
-  String url = "https://firestore.googleapis.com/v1/projects/fitgate-iot/databases/(default)/documents/lockerOpenRequests?pageSize=5&orderBy=requestedAt%20desc";
   http.begin(client, url);
-  int httpCode = http.GET();
-  if (httpCode == 200) {
-    String response = http.getString();
-    Serial.println(response);
-    StaticJsonDocument<4096> doc;
-    DeserializationError err = deserializeJson(doc, response);
-    if (!err) {
-      JsonArray docs = doc["documents"];
-      for (JsonObject d : docs) {
-        String lockerId = d["fields"]["lockerId"]["stringValue"];
-        String status = d["fields"]["status"]["stringValue"];
-        Serial.print("Firestore: lockerId="); Serial.print(lockerId);
-        Serial.print(", status="); Serial.println(status);
-        if (lockerId == LOCKER_ID && status == "pending") {
-          Serial.println("[API] Zahtjev za otvaranje ormarica iz aplikacije!");
-          String docName = d["name"].as<String>();
-          int lastSlash = docName.lastIndexOf('/');
-          String requestId = lastSlash >= 0 ? docName.substring(lastSlash + 1) : "";
-          grantAccess();
-          if (requestId.length() > 0) {
-            markLockerRequestCompleted(requestId);
-          }
-          break;
-        }
-      }
-    }
-  }
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (isPost) http.addHeader("Content-Type", "application/json");
+  int code = isPost ? http.POST(payload) : http.GET();
   http.end();
+  return code;
 }
 
-// Označi zahtjev dovršenim preko Cloud Function (Firestore PATCH bez auth ne radi s MCU)
-void markLockerRequestCompleted(String requestId) {
+String httpPostString(const char* url, const String& payload) {
+  if (WiFi.status() != WL_CONNECTED) return "";
   HTTPClient http;
-  String url = "https://europe-west1-fitgate-iot.cloudfunctions.net/completeLockerRequest";
   http.begin(client, url);
+  http.setTimeout(HTTP_TIMEOUT_MS);
   http.addHeader("Content-Type", "application/json");
-  String payload = "{\"requestId\":\"" + requestId + "\"}";
-  int httpCode = http.POST(payload);
-  if (httpCode == 200) {
-    Serial.println("[API] Locker request marked as completed -> notifikacija ce stici clanu.");
-  } else {
-    Serial.print("[API] Failed to mark request completed: ");
-    Serial.println(httpCode);
-  }
+  int code = http.POST(payload);
+  String response = (code == 200) ? http.getString() : "";
   http.end();
+  return response;
 }
 
-bool verifyAccess(String cardId) {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected!");
-    return false;
-  }
-  
+String httpGetString(const char* url) {
+  if (WiFi.status() != WL_CONNECTED) return "";
   HTTPClient http;
-  http.begin(client, firebaseUrl);
-  http.addHeader("Content-Type", "application/json");
-  
-  // Kreiraj JSON payload
+  http.begin(client, url);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  int code = http.GET();
+  String response = (code == 200) ? http.getString() : "";
+  http.end();
+  return response;
+}
+
+// ===================== FIREBASE =====================
+bool verifyAccess(const String &cardId) {
   StaticJsonDocument<200> doc;
   doc["cardId"] = cardId;
   doc["lockerId"] = LOCKER_ID;
-  
+
   String payload;
   serializeJson(doc, payload);
-  
-  Serial.println("[API] → Šaljem zahtjev Firebase-u...");
-  Serial.print("[API]   Payload: ");
-  Serial.println(payload);
-  int httpCode = http.POST(payload);
-  if (httpCode > 0) {
-    String response = http.getString();
-    Serial.print("[API] ← Odgovor: ");
-    Serial.println(httpCode);
-    Serial.println("[API]   JSON:");
-    // Lijepo formatiran JSON
-    StaticJsonDocument<1024> prettyDoc;
-    DeserializationError prettyErr = deserializeJson(prettyDoc, response);
-    if (!prettyErr) {
-      serializeJsonPretty(prettyDoc, Serial);
-      Serial.println();
-    } else {
-      Serial.println(response); // fallback
-    }
-    // Prikaži samo bitne dijelove odgovora
-    if (httpCode == 200) {
-      StaticJsonDocument<512> responseDoc;
-      DeserializationError error = deserializeJson(responseDoc, response);
-      if (!error) {
-        bool authorized = responseDoc["authorized"];
-        String memberName = responseDoc["memberName"] | "Unknown";
-        Serial.print("[API]   Status: ");
-        if (authorized) {
-          Serial.print("DOZVOLJEN | Korisnik: ");
-          Serial.println(memberName);
-          http.end();
-          return true;
-        } else {
-          Serial.println("ODBIJEN");
-        }
-      } else {
-        Serial.println("[API]   GRESKA: Ne mogu parsirati odgovor!");
-      }
-    } else {
-      // Prikaži razlog odbijanja
-      StaticJsonDocument<256> errDoc;
-      DeserializationError err = deserializeJson(errDoc, response);
-      String reason = errDoc["reason"] | "Nepoznat razlog";
-      String code = errDoc["code"] | "";
-      Serial.print("[API]   ODBIJENO: ");
-      Serial.print(reason);
-      if (code.length() > 0) {
-        Serial.print(" (code: ");
-        Serial.print(code);
-        Serial.print(")");
-      }
-      Serial.println();
-    }
-  } else {
-    Serial.print("[API]   HTTP Error: ");
-    Serial.println(http.errorToString(httpCode));
+
+  String response = httpPostString(firebaseUrlVerify, payload);
+  if (response.length() == 0) return false;
+
+  StaticJsonDocument<512> resp;
+  if (deserializeJson(resp, response) == DeserializationError::Ok) {
+    bool authorized = resp["authorized"] | false;
+    Serial.print("[API] ");
+    Serial.println(authorized ? "YES" : "NO");
+    return authorized;
   }
-  http.end();
   return false;
 }
 
-void grantAccess() {
-  Serial.println(">>> ACCESS GRANTED <<<");
-  
-  // Pozitivan zvuk - pristup odobren (duga nota, visok ton)
-  tone(BUZZER_PIN, 2000, 500);
-  
-  // LED svijetli kontinuirano 5 sekundi
-  digitalWrite(STATUS_LED, HIGH);
-  delay(5000);
-  digitalWrite(STATUS_LED, LOW);
-  
-  Serial.println("Locker unlocked for 5 seconds");
+void markLockerRequestCompleted(const String &requestId) {
+  String payload = "{\"requestId\":\"" + requestId + "\"}";
+  if (httpRequest(firebaseUrlComplete, payload, true) == 200) {
+    Serial.println("[API] completed");
+  }
 }
 
-void denyAccess() {
+// ===================== LOCKER =====================
+void startUnlockSequence() {
+  if (requestInProgress) return;
+  requestInProgress = true;
+  lockerState = LockerState::OPENING;
+  stateStartedMs = millis();
+
+  ledOn();
+  tone(BUZZER_PIN, 1800, 120);
+  unsigned long start = millis();
+  while (millis() - start < 140) yield();
+
+  Serial.println(">>> ACCESS GRANTED <<<");
+}
+
+void startDenySequence() {
   Serial.println(">>> ACCESS DENIED <<<");
-  
-  // Negativan zvuk - pristup odbijen (3x kratke note, nizak ton)
   for (int i = 0; i < 3; i++) {
     tone(BUZZER_PIN, 400, 150);
-    delay(200);
+    unsigned long start = millis();
+    while (millis() - start < 220) yield();
   }
-  
-  // LED trepće brzo 5 puta
   for (int i = 0; i < 5; i++) {
-    digitalWrite(STATUS_LED, HIGH);
-    delay(150);
-    digitalWrite(STATUS_LED, LOW);
-    delay(150);
+    ledOn();
+    unsigned long start = millis();
+    while (millis() - start < 120) yield();
+    ledOff();
+    start = millis();
+    while (millis() - start < 120) yield();
   }
 }
 
-void testConnection() {
-  Serial.println("\nTesting Firebase connection...");
-  
-  HTTPClient http;
-  String healthUrl = "https://europe-west1-fitgate-iot.cloudfunctions.net/healthCheck";
-  
-  http.begin(client, healthUrl);
-  int httpCode = http.GET();
-  
-  if (httpCode == 200) {
-    Serial.println("✓ Firebase connection OK!");
-    String response = http.getString();
-    Serial.println(response);
-    
-    // Zvuk + 2x brzi blink - uspješna konekcija
-    tone(BUZZER_PIN, 1500, 100);
-    for (int i = 0; i < 2; i++) {
-      digitalWrite(STATUS_LED, HIGH);
-      delay(100);
-      digitalWrite(STATUS_LED, LOW);
-      delay(100);
-    }
-  } else {
-    Serial.print("✗ Firebase connection failed: ");
-    Serial.println(httpCode);
-    
-    // Greška zvuk + 5x brzi blink
-    tone(BUZZER_PIN, 300, 500);
-    for (int i = 0; i < 5; i++) {
-      digitalWrite(STATUS_LED, HIGH);
-      delay(100);
-      digitalWrite(STATUS_LED, LOW);
-      delay(100);
-    }
+void motorRelease() {
+  digitalWrite(ST_IN1, LOW);
+  digitalWrite(ST_IN2, LOW);
+  digitalWrite(ST_IN3, LOW);
+  digitalWrite(ST_IN4, LOW);
+}
+
+void motorStep(int steps) {
+  stepperMotor.setSpeed(MOTOR_RPM);
+
+  int dir = (steps >= 0) ? 1 : -1;
+  int count = abs(steps);
+
+  for (int i = 0; i < count; i++) {
+    stepperMotor.step(dir); // 1 korak
+    yield();                // sprijeci WDT reset
+    ESP.wdtFeed();
   }
-  
-  http.end();
+
+  motorRelease();
+}
+
+
+void tickLockerStateMachine() {
+  unsigned long now = millis();
+  switch (lockerState) {
+    case LockerState::IDLE: return;
+
+    case LockerState::OPENING:
+      motorStep(+UNLOCK_STEPS);
+      lockerState = LockerState::HOLD_OPEN;
+      stateStartedMs = now;
+      return;
+
+    case LockerState::HOLD_OPEN:
+      if (now - stateStartedMs >= OPEN_HOLD_MS) {
+        lockerState = LockerState::CLOSING;
+        stateStartedMs = now;
+      }
+      return;
+
+    case LockerState::CLOSING:
+      motorStep(-UNLOCK_STEPS);
+      ledOff();
+      lockerState = LockerState::IDLE;
+      requestInProgress = false;
+
+      // PATCH: nakon motora “osvježi” RFID (pomaže u praksi)
+      SPI.begin();
+      rfid.PCD_Init();
+      rfid.PCD_StopCrypto1();
+
+      Serial.println(">>> DONE <<<");
+      return;
+  }
+}
+
+// ===================== POLLING =====================
+void pollLockerOpenRequests() {
+  if (WiFi.status() != WL_CONNECTED || requestInProgress) return;
+
+  String response = httpGetString(firestoreListUrl);
+  if (response.length() == 0) return;
+
+  StaticJsonDocument<4096> doc;
+  if (deserializeJson(doc, response) != DeserializationError::Ok) return;
+
+  for (JsonObject d : doc["documents"].as<JsonArray>()) {
+    if ((String)d["fields"]["lockerId"]["stringValue"] != LOCKER_ID) continue;
+    if ((String)d["fields"]["status"]["stringValue"] != "pending") continue;
+
+    String docName = d["name"].as<String>();
+    int lastSlash = docName.lastIndexOf('/');
+    String requestId = lastSlash >= 0 ? docName.substring(lastSlash + 1) : "";
+
+    if (requestId.length() == 0 || requestId == lastHandledRequestId) continue;
+
+    lastHandledRequestId = requestId;
+    Serial.println("[API] open request");
+
+    markLockerRequestCompleted(requestId);
+    startUnlockSequence();
+    break;
+  }
+}
+
+// ===================== WIFI =====================
+void ensureWiFiConnected() {
+  if (WiFi.status() == WL_CONNECTED) return;
+  unsigned long now = millis();
+  if (now - lastWiFiAttemptMs < WIFI_RETRY_MS) return;
+  lastWiFiAttemptMs = now;
+  WiFi.begin(ssid, password);
+}
+
+// ===================== RFID =====================
+void resetRfidIfNeeded() {
+  unsigned long now = millis();
+  if (now - lastRfidResetMs < RFID_RESET_INTERVAL_MS) return;
+  lastRfidResetMs = now;
+  rfid.PCD_Init();
+  yield();
+}
+
+// ===================== SETUP =====================
+void setup() {
+  Serial.begin(9600);
+  delay(50);
+
+
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+  ledOff();
+
+  pinMode(ST_IN1, OUTPUT);
+  pinMode(ST_IN2, OUTPUT);
+  pinMode(ST_IN3, OUTPUT);
+  pinMode(ST_IN4, OUTPUT);
+  motorRelease();
+
+  SPI.begin();
+  rfid.PCD_Init();
+
+  client.setInsecure();
+  client.setTimeout(HTTP_TIMEOUT_MS);
+
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  for (int i = 0; i < 20 && WiFi.status() != WL_CONNECTED; i++) {
+    delay(300);
+    Serial.print(".");
+    ESP.wdtFeed();
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("\nWiFi: ");
+    Serial.println(WiFi.localIP());
+    if (httpRequest(firebaseUrlHealth) == 200) Serial.println("Firebase OK");
+  } else {
+    Serial.println("\n[WiFi] retry in loop");
+  }
+
+  Serial.println("Ready...");
+  lastRfidResetMs = millis();
+}
+
+// ===================== LOOP =====================
+void loop() {
+  ESP.wdtFeed();
+
+  ensureWiFiConnected();
+  tickLockerStateMachine();
+  resetRfidIfNeeded();
+
+  if (!requestInProgress && rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    String cardId = uidToHexUpper(rfid.uid);
+
+    tone(BUZZER_PIN, 1200, 80);
+    unsigned long start = millis();
+    while (millis() - start < 90) yield();
+
+    Serial.print("[RFID] Kartica: ");
+    Serial.println(cardId);
+
+    bool authorized = verifyAccess(cardId);
+    if (authorized) startUnlockSequence();
+    else startDenySequence();
+
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+
+    start = millis();
+    while (millis() - start < 200) yield();
+  }
+
+  unsigned long now = millis();
+  if (now - lastPollMs >= POLL_INTERVAL_MS) {
+    lastPollMs = now;
+    pollLockerOpenRequests();
+  }
+
+  yield();
 }
