@@ -67,3 +67,33 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.buildlog/
+
+# Build outputs
+build/
+**/build/
+
+# Android/Gradle
+.gradle/
+local.properties
+
+# Xcode
+Pods/
+DerivedData/
+*.xcworkspace
+*.xcuserstate
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Misc
+.DS_Store
+Thumbs.db
