@@ -1,0 +1,25 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "members",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "registeredAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "queryScope": "Collection",
+      "fields": [
+        {
+          "fieldPath": "uid",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
