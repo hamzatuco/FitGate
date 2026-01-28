@@ -1,138 +1,123 @@
-# FitGate — IoT Locker & Access System (Entrio-style)
-FitGate is a smart IoT-based access control and locker management system for gyms and fitness centers. It enables RFID/NFC member identification, automatic membership validation, real-time access logging, and centralized management of users and lockers through an integrated mobile and backend platform. Flutter Firebase
+# FitGate — IoT Locker & Access Control System
 
-The system components:
+**FitGate** je pametni IoT sistem za kontrolu pristupa i upravljanje ormarićima u teretanama i fitness centrima. Sistem omogućava identifikaciju članova putem RFID kartica, validaciju članarine, upravljanje ormarićima u realnom vremenu te centralizovanu administraciju korisnika i ormarića putem mobilne i web aplikacije.
 
-- ESP8266 MCU firmware (RFID reader, stepper lock control, ultrasonic sensor)
-- Firebase Cloud Functions (verify, open, complete, notifications)
-- Flutter apps: `apps/fitgate_client` (member) and `apps/fitgate_admin` (staff)
-- Shared Dart models in `shared/fitgate_shared`
+FitGate kombinuje **ESP8266 mikrokontroler**, **Firebase backend** i **Flutter aplikacije** kako bi obezbijedio sigurno, pouzdano i skalabilno rješenje za upravljanje pristupom.
 
 ---
 
-## 1️⃣ Authoritative Pin Mapping (ESP8266)
+## Arhitektura sistema
 
-Match these pins to `fitgate-mcu/FitGate/FitGate.ino` (single source of truth).
+Sistem se sastoji od sljedećih komponenti:
+
+- **ESP8266 MCU firmware**  
+  Upravljanje RFID čitačem, stepper motorom (brava ormarića), statusnom LED diodom i buzzerom, kao i periodična komunikacija s backendom.
+
+- **Firebase Cloud Functions**  
+  Poslovna logika sistema (verifikacija pristupa, otvaranje ormarića, završetak zahtjeva, notifikacije).
+
+- **Flutter aplikacije**
+  - `apps/fitgate_client` – aplikacija za članove teretane  
+  - `apps/fitgate_admin` – aplikacija za osoblje teretane (administracija)
+
+- **Zajednički modeli**
+  - `shared/fitgate_shared` – zajednički Dart modeli i util klase
+
+---
+
+## Pin mapping (ESP8266 – autoritativni raspored)
 
 ### RC522 RFID (SPI)
 
-| ESP8266 (D..) | GPIO | RC522 pin | Purpose |
-|--------------:|:----:|:---------|:-------|
-| D2           | GPIO4 | SDA / SS  | Chip select (RC522 SS)
-| -            | -     | RST       | tied to 3.3V (no reset pin)
-| 3V3          | -     | VCC       | Power (3.3V ONLY)
-| GND          | -     | GND       | Ground
-
-### LEDs & Buzzer
-
-| Name | ESP8266 pin | Purpose |
-|------|-------------|--------|
-| STATUS_LED_PIN | D1 (GPIO5) | Status LED (active-low by default)
-| BUZZER_PIN     | D1 (GPIO5) | Buzzer (shares pin)
-
-### Stepper (28BYJ-48 via ULN2003)
-
-| MCU label | ESP8266 pin | Board pin |
-|-----------|-------------|----------|
-| ST_IN1    | D3 (GPIO0)  | IN1
-| ST_IN2    | D4 (GPIO2)  | IN2
-| ST_IN3    | D8 (GPIO15) | IN3
-| ST_IN4    | RX (GPIO3)  | IN4
-
-Power: ULN2003 VCC → external 5V (VIN/USB), ULN2003 GND → ESP GND (common ground)
-
-### Ultrasonic HC-SR04
-
-| Signal | ESP8266 pin |
-|--------|-------------|
-| TRIG   | (configurable) — used in firmware polling
-| ECHO   | (read via voltage divider) — do NOT connect 5V directly to ESP GPIO
-
-In firmware this board polls Firestore and also uses ultrasonic readings to stop/hold the motor while closing.
+| ESP8266 | GPIO | RC522 pin | Opis |
+|------|------|----------|------|
+| D2 | GPIO4 | SDA / SS | Chip Select |
+| – | – | RST | Spojen direktno na 3.3V |
+| 3V3 | – | VCC | Napajanje (isključivo 3.3V) |
+| GND | – | GND | Masa |
 
 ---
 
-## 2️⃣ Cloud endpoints & data model (quick)
+### LED i buzzer
 
-- `verifyLockerAccess` (HTTPS) — used by MCU when an RFID is presented. Validates card, membership and locker assignment. Writes to `accessAttempts` and creates `lockerSessions` on success.
-- `openLocker` (HTTPS) — called by mobile app; creates a `lockerOpenRequests` doc (status `pending`). MCU polls `lockerOpenRequests` via Firestore REST and executes pending requests.
-- `completeLockerRequest` (HTTPS) — MCU calls this after a successful open to mark the request completed (triggers member notification).
-- Firestore collections used: `members`, `lockers`, `lockerOpenRequests`, `accessAttempts`, `lockerSessions`.
-
-Refer to `fitgate-firebase-functions/functions/index.js` for full logic and notification flows.
+| Komponenta | ESP8266 pin | Opis |
+|---------|------------|------|
+| STATUS_LED | D1 (GPIO5) | Statusna LED (active-low konfiguracija) |
+| BUZZER | D1 (GPIO5) | Zvučna signalizacija |
 
 ---
 
-## 3️⃣ Developer Quick Start
+### Stepper motor (28BYJ-48 + ULN2003)
 
-Prerequisites:
-- Arduino IDE or PlatformIO (ESP8266 toolchain)
-- Firebase CLI, Node.js
-- Flutter SDK (for mobile apps)
+| ULN2003 | ESP8266 pin | GPIO |
+|-------|-------------|------|
+| IN1 | D3 | GPIO0 |
+| IN2 | D4 | GPIO2 |
+| IN3 | D8 | GPIO15 |
+| IN4 | RX | GPIO3 |
 
-1) Clone the repo
+**Napomena:**  
+- Motor se napaja sa **5V** (USB/VIN)  
+- **Zajednička masa (GND)** između ESP8266 i ULN2003 je obavezna
 
-```bash
-git clone <repo-url>
-cd FitGate
-```
+---
 
-2) Cloud Functions
+## Backend i Cloud endpoints
 
-```bash
-cd fitgate-firebase-functions/functions
-npm install
-firebase deploy --only functions,firestore:indexes
-```
+### Glavni endpointi
 
-3) Configure and upload MCU firmware
+- **`verifyLockerAccess`**  
+  Poziva ga ESP8266 prilikom skeniranja RFID kartice.  
+  Provjerava validnost kartice, status članarine i dodijeljeni ormarić.
 
-- Open `fitgate-mcu/FitGate/FitGate.ino` and set your WiFi and the constants at the top:
+- **`openLocker`**  
+  Poziva ga Flutter aplikacija (član).  
+  Kreira zahtjev za otvaranje ormarića (`lockerOpenRequests`).
+
+- **`completeLockerRequest`**  
+  Poziva ga ESP8266 nakon uspješnog otvaranja ormarića.
+
+---
+
+### Firestore kolekcije
+
+- `members`
+- `lockers`
+- `lockerOpenRequests`
+- `accessAttempts`
+- `lockerSessions`
+
+---
+
+## Tipični tokovi rada
+
+### RFID pristup
+1. Član prisloni RFID karticu  
+2. ESP8266 šalje UID kartice backendu  
+3. Backend validira pristup  
+4. Ormarić se otvara ili se pristup odbija  
+5. Događaj se evidentira u bazi podataka
+
+### Otvaranje preko aplikacije
+1. Član pošalje zahtjev iz aplikacije  
+2. Backend kreira `lockerOpenRequests` zapis  
+3. ESP8266 periodično vrši polling  
+4. Ormarić se otvara i zahtjev se označava kao završen
+
+---
+
+## Pokretanje projekta (Developer Quick Start)
+
+### Preduvjeti
+- Arduino IDE (ESP8266 toolchain)
+- Firebase CLI + Node.js
+- Flutter SDK
+
+### Firmware (ESP8266)
+
+U fajlu `fitgate-mcu/FitGate/FitGate.ino` podesiti:
 
 ```cpp
 const char* ssid = "YourSSID";
 const char* password = "YourPassword";
-const char* firebaseUrlVerify = "https://<region>-<project>.cloudfunctions.net/verifyLockerAccess";
-const char* firebaseUrlComplete = "https://<region>-<project>.cloudfunctions.net/completeLockerRequest";
-const char* firestoreListUrl = "https://firestore.googleapis.com/v1/projects/<project>/databases/(default)/documents/lockerOpenRequests?pageSize=5&orderBy=requestedAt%20desc";
 const char* LOCKER_ID = "<locker-id>";
-```
-
-- Make sure `client.setInsecure()` or valid TLS is configured for your environment.
-- Upload to ESP8266.
-
-4) Run Flutter apps (optional)
-
-```bash
-cd apps/fitgate_client
-flutter pub get
-flutter run
-
-cd ../fitgate_admin
-flutter pub get
-flutter run
-```
-
----
-
-## 4️⃣ Typical flows & testing
-
-- RFID flow: present a registered card → MCU calls `verifyLockerAccess` → on success stepper opens, `lockerSessions` created, and `accessAttempts` logged.
-- App-initiated open: app calls `openLocker` → `lockerOpenRequests` doc created → MCU polls and executes → MCU calls `completeLockerRequest`.
-- Debug: check MCU serial output (9600 baud) and Cloud Functions logs.
-
----
-
-## 5️⃣ Troubleshooting (common)
-
-- MCU Wi‑Fi fails: check SSID/password and Wi‑Fi retry timing in `FitGate.ino`.
-- RFID not read: confirm wiring (RC522 SS to D2), 3.3V supply and SPI pins; check `uidToHexUpper` logs on serial.
-- Stepper power issues: use a separate 5V supply for ULN2003/motor, common ground with ESP.
-- Firestore polling: ensure `firestoreListUrl` points to your project and that functions are deployed.
-
----
-
-If you want, I can:
-- Add a schematic diagram and wiring photos for the ESP8266 + RC522 + ULN2003.
-- Add sample cURL/Postman requests for `verifyLockerAccess` and `openLocker`.
-- Merge this Entrio-style README into a top-level `README.md` branch-ready commit.
