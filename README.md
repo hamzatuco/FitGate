@@ -121,7 +121,7 @@ U fajlu `fitgate-mcu/FitGate/FitGate.ino` podesiti:
 const char* ssid = "YourSSID";
 const char* password = "YourPassword";
 const char* LOCKER_ID = "<locker-id>";
-
+```
 
 ### ESP8266 Board Manager URL
 Add the following URL to Arduino IDE → Preferences → Additional Boards Manager URLs:
