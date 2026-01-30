@@ -121,3 +121,6 @@ U fajlu `fitgate-mcu/FitGate/FitGate.ino` podesiti:
 const char* ssid = "YourSSID";
 const char* password = "YourPassword";
 const char* LOCKER_ID = "<locker-id>";
+
+
+[Board link](https://arduino.esp8266.com/stable/package_esp8266com_index.json)
