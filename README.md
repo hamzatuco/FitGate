@@ -123,4 +123,7 @@ const char* password = "YourPassword";
 const char* LOCKER_ID = "<locker-id>";
 
 
-[Board link](https://arduino.esp8266.com/stable/package_esp8266com_index.json)
+### ESP8266 Board Manager URL
+Add the following URL to Arduino IDE → Preferences → Additional Boards Manager URLs:
+
+[https://arduino.esp8266.com/stable/package_esp8266com_index.json](https://arduino.esp8266.com/stable/package_esp8266com_index.json)
