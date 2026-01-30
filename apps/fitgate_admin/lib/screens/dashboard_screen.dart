@@ -1,6 +1,7 @@
 import 'package:fitgate_admin/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import '../widgets/stat_card.dart';
+import '../theme/app_colors.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/empty_view.dart';
 
@@ -62,7 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         'Kontrolna ploča',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: const Color(0xFF0f172a),
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -120,7 +121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         title: 'Aktivni članovi',
                         value: '${stats['activeMembersCount'] ?? 0}',
                         icon: Icons.people_rounded,
-                        color: Colors.blue,
+                        color: AppColors.primary,
                       ),
                       StatCard(
                         title: 'Aktivne sesije',
@@ -149,7 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 'Nedavna aktivnost',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: const Color(0xFF0f172a),
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),

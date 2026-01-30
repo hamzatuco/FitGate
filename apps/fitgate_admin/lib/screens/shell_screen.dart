@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 
+import 'package:fitgate_admin/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
@@ -94,7 +95,7 @@ class ShellScreen extends StatelessWidget {
               width: 260,
               height: double.infinity,
               decoration: BoxDecoration(
-                color: const Color(0xFF0f172a),
+                color: AppColors.textPrimary,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.15),

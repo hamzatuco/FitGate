@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 import 'package:fitgate_admin/widgets/stat_card.dart';
+import 'package:fitgate_admin/theme/app_colors.dart';
 import 'package:fitgate_admin/widgets/status_badge.dart';
 import 'package:fitgate_admin/widgets/locker_tile.dart';
 import 'package:fitgate_admin/widgets/confirm_dialog.dart';
@@ -28,11 +29,11 @@ class FitGateWidgetbook extends StatelessWidget {
                   name: 'Default',
                   builder: (context) => SizedBox(
                     width: 320,
-                    child: const StatCard(
+                      child: const StatCard(
                       title: 'Active Members',
                       value: '128',
                       icon: Icons.group,
-                      color: Colors.blue,
+                      color: AppColors.primary,
                     ),
                   ),
                 ),

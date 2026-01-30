@@ -5,7 +5,7 @@ import '../widgets/locker_tile.dart';
 import '../widgets/confirm_dialog.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/empty_view.dart';
-
+import '../theme/app_colors.dart';
 /// Lockers management screen
 class LockersScreen extends StatefulWidget {
   const LockersScreen({super.key});
@@ -337,7 +337,7 @@ class _LockersScreenState extends State<LockersScreen> {
                         Text(
                           'Ormari',
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: const Color(0xFF0f172a),
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

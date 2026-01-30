@@ -161,6 +161,17 @@ class FirestoreService {
     }
   }
 
+  /// Update arbitrary additional fields on a member document (e.g., email)
+  Future<void> updateMemberFields(String memberId, Map<String, dynamic> fields) async {
+    try {
+      final updated = Map<String, dynamic>.from(fields);
+      updated['updatedAt'] = FieldValue.serverTimestamp();
+      await _firestore.collection('members').doc(memberId).update(updated);
+    } catch (e) {
+      throw Exception('Greška pri ažuriranju polja člana: $e');
+    }
+  }
+
   /// Delete member
   Future<void> deleteMember(String memberId) async {
     try {

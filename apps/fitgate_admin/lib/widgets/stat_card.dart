@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
 
 /// Dashboard stat card widget
 /// Displays a metric with icon, title, and value
@@ -13,7 +14,7 @@ class StatCard extends StatelessWidget {
     required this.title,
     required this.value,
     required this.icon,
-    this.color = Colors.blue,
+    this.color = AppColors.primary,
   });
 
   @override
@@ -68,7 +69,7 @@ class StatCard extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0f172a),
+                color: AppColors.textPrimary,
                 letterSpacing: -0.5,
               ),
             ),

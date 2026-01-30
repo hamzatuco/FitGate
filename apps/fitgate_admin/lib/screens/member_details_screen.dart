@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
 import 'package:flutter/services.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_colors.dart';
 
 /// Member details screen showing comprehensive member information
 class MemberDetailsScreen extends StatefulWidget {
@@ -220,6 +221,77 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
     }
   }
 
+  Future<void> _extendMembership(int days) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Produži članarinu'),
+        content: Text('Jeste li sigurni da želite produžiti članarinu za $days dana?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Otkaži'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Produži'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final now = DateTime.now();
+      DateTime base = _member.membershipValidUntil.isAfter(now)
+          ? _member.membershipValidUntil
+          : now;
+
+      final newValidUntil = base.add(Duration(days: days));
+
+      final updatedMember = Member(
+        id: _member.id,
+        name: _member.name,
+        cardId: _member.cardId,
+        status: 'active',
+        assignedLocker: _member.assignedLocker,
+        membershipValidUntil: newValidUntil,
+        registeredAt: _member.registeredAt,
+      );
+
+      await _firestoreService.updateMember(_member.id, updatedMember);
+
+      await _firestoreService.logActivity(
+        action: 'extend_membership',
+        memberId: _member.id,
+        memberName: _member.name,
+        staffId: 'admin-1',
+        staffName: 'Admin',
+        description: 'Produžena članarina za $days dana',
+        success: true,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _member = updatedMember;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Članarina produžena za $days dana')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Greška: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 768;
@@ -273,14 +345,14 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Colors.blue[600]!, Colors.blue[800]!],
+          colors: [AppColors.primaryLight, AppColors.primary],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.blue.withOpacity(0.3),
+            color: AppColors.primary.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -450,6 +522,51 @@ class _MemberDetailsScreenState extends State<MemberDetailsScreen> {
               _formatDate(_member.registeredAt),
             ),
             _buildDaysRemainingRow(),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _extendMembership(2),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('+2 dana'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _extendMembership(7),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('+7 dana'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _extendMembership(30),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('+30 dana'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _extendMembership(60),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('+60 dana'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : () => _extendMembership(365),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text('+365 dana'),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 24),

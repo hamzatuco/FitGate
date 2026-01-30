@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
+import 'theme/app_colors.dart';
 import 'screens/login_screen.dart';
 import 'screens/member_edit_screen.dart';
 import 'screens/member_details_screen.dart';
@@ -20,7 +21,7 @@ class FitGateAdminApp extends StatelessWidget {
         // Professional, clean design
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: AppColors.primary,
           brightness: Brightness.light,
         ),
         brightness: Brightness.light,
@@ -31,26 +32,26 @@ class FitGateAdminApp extends StatelessWidget {
         // Text styles with Poppins
         textTheme: GoogleFonts.poppinsTextTheme(
           ThemeData.light().textTheme.apply(
-            bodyColor: Colors.black87,
-            displayColor: Colors.black87,
+            bodyColor: AppColors.textPrimary,
+            displayColor: AppColors.textPrimary,
           ),
         ).copyWith(
           headlineSmall: GoogleFonts.poppins(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+                      color: AppColors.textPrimary,
           ),
           titleLarge: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: Colors.black87,
+                      color: AppColors.textPrimary,
           ),
         ),
 
         // App bar styling
         appBarTheme: AppBarTheme(
           elevation: 0,
-          backgroundColor: Colors.blue[700],
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           centerTitle: false,
         ),
@@ -58,7 +59,7 @@ class FitGateAdminApp extends StatelessWidget {
         // Button styling
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue[700],
+            backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(
               horizontal: 24,
@@ -84,7 +85,7 @@ class FitGateAdminApp extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.blue[700]!, width: 2),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,

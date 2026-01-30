@@ -1,4 +1,5 @@
 import 'package:fitgate_admin/services/firestore_service.dart';
+import 'package:fitgate_admin/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:fitgate_shared/fitgate_shared.dart';
 import '../widgets/loading_view.dart';
@@ -142,7 +143,7 @@ class _MembersScreenState extends State<MembersScreen> with WidgetsBindingObserv
                           Text(
                             'Članovi',
                             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: const Color(0xFF0f172a),
+                              color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),

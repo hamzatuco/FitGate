@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_colors.dart';
 
 class ActivityLogsScreen extends StatefulWidget {
   const ActivityLogsScreen({super.key});
@@ -15,13 +16,15 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
   String _selectedStatus = 'All';
   bool _isDescending = true;
   
-  final List<String> _actionFilters = ['All', 'assign_locker', 'force_release', 'mark_out_of_service', 'suspend_member', 'problem_reported'];
+  final List<String> _actionFilters = ['All', 'assign_locker', 'force_release', 'mark_out_of_service', 'extend_membership', 'suspend_member', 'problem_reported'];
   final List<String> _statusFilters = ['All', 'completed', 'failed'];
 
   String _getActionLabel(String action) {
     switch (action) {
       case 'assign_locker':
         return 'Dodjela ormara';
+      case 'extend_membership':
+        return 'Članarina produžena od strane admina';
       case 'force_release':
         return 'Oslobađanje ormara';
       case 'problem_reported':
@@ -39,6 +42,8 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
     switch (action) {
       case 'assign_locker':
         return Colors.green;
+      case 'extend_membership':
+        return Colors.blue;
       case 'force_release':
         return Colors.orange;
       case 'problem_reported':
@@ -48,7 +53,7 @@ class _ActivityLogsScreenState extends State<ActivityLogsScreen> {
       case 'suspend_member':
         return Colors.purple;
       default:
-        return Colors.blue;
+        return AppColors.primary;
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:fitgate_admin/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -117,13 +118,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0f172a).withOpacity(0.08),
+                        color: AppColors.textPrimary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         Icons.admin_panel_settings_rounded,
                         size: 48,
-                        color: const Color(0xFF0f172a),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
@@ -209,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0f172a),
+                    backgroundColor: AppColors.textPrimary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
